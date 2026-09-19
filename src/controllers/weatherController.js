@@ -1,5 +1,4 @@
-const fetch = require('node-fetch');
-
+// Node has a global fetch() built in (Node 18+), so no package/require is needed.
 let cache = {
   data: null,
   timestamp: 0
