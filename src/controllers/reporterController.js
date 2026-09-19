@@ -44,8 +44,11 @@ function newArticleForm(req, res) {
 
 async function create(req, res, next) {
   try {
+    // Whitelist: only accept editable fields from the form. NEVER take status/author/published
+    // from req.body — a reporter must not be able to publish their own article.
+    const { title, summary, body, category, image } = req.body;
     const article = new Article({
-      ...req.body,
+      title, summary, body, category, image,
       author: req.session.user.id,
       status: 'draft'
     });
@@ -70,9 +73,12 @@ async function update(req, res, next) {
   try {
     const article = await Article.findOne({ _id: req.params.id, author: req.session.user.id });
     if (!article) return res.status(404).send('Not found');
-    
-    // Do not allow status change here
-    Object.assign(article, req.body);
+
+    // Whitelist the editable fields — never let the body change status/author/published.
+    const editable = ['title', 'summary', 'body', 'category', 'image'];
+    for (const field of editable) {
+      if (req.body[field] !== undefined) article[field] = req.body[field];
+    }
     await article.save();
     res.redirect('/reporter');
   } catch (err) {
@@ -108,7 +114,7 @@ async function autosave(req, res, next) {
     
     article.title = req.body.title || article.title;
     article.summary = req.body.summary || article.summary;
-    article.content = req.body.content || article.content;
+    article.body = req.body.body || article.body;
     article.category = req.body.category || article.category;
     article.image = req.body.image || article.image;
     

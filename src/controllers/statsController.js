@@ -22,11 +22,11 @@ const Article = require('../models/Article');
 
 async function recordView(articleId) {
   try {
-    const currentHour = new Date();
-    currentHour.setMinutes(0, 0, 0); // truncate to hour
+    const bucket = new Date();
+    bucket.setMinutes(0, 0, 0); // truncate to the hour
 
     await View.updateOne(
-      { article: articleId, hour: currentHour },
+      { article: articleId, bucket },
       { $inc: { count: 1 } },
       { upsert: true }
     );
@@ -40,10 +40,10 @@ async function articleStats(req, res, next) {
     const article = await Article.findById(req.params.id);
     if (!article) return res.status(404).json({ error: 'Article not found' });
 
-    const views = await View.find({ article: req.params.id }).sort({ hour: 1 });
-    
+    const views = await View.find({ article: req.params.id }).sort({ bucket: 1 });
+
     const series = views.map(v => ({
-      t: v.hour,
+      t: v.bucket,
       views: v.count
     }));
 

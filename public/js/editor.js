@@ -16,7 +16,7 @@ if (form && articleIdInput) {
       category: document.getElementById('field-category').value,
       image: document.getElementById('field-image').value,
       summary: document.getElementById('field-summary').value,
-      content: document.getElementById('field-content').value,
+      body: document.getElementById('field-body').value,
     };
 
     try {

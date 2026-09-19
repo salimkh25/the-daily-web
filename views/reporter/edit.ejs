@@ -51,7 +51,7 @@
 
     <label class="field">
       <span class="field__label">Content</span>
-      <textarea class="field__input" name="content" id="field-content" rows="15" required <%= article.status === 'pending' ? 'disabled' : '' %>><%= article.content || '' %></textarea>
+      <textarea class="field__input" name="body" id="field-body" rows="15" required <%= article.status === 'pending' ? 'disabled' : '' %>><%= article.body || '' %></textarea>
     </label>
 
     <% if (mode === 'create') { %>

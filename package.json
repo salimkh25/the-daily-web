@@ -8,7 +8,14 @@
     "dev": "node --env-file-if-exists=.env --watch server.js",
     "seed": "node --env-file-if-exists=.env seed/seed.js"
   },
-  "keywords": ["news", "express", "mongodb", "mongoose", "ejs", "mvc"],
+  "keywords": [
+    "news",
+    "express",
+    "mongodb",
+    "mongoose",
+    "ejs",
+    "mvc"
+  ],
   "author": "salimkh25 and team",
   "license": "ISC",
   "dependencies": {
@@ -17,6 +24,7 @@
     "ejs": "^3.1.10",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
+    "method-override": "^3.0.0",
     "mongoose": "^8.9.5"
   }
 }

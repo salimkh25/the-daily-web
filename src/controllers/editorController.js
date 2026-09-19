@@ -46,8 +46,12 @@ async function update(req, res, next) {
   try {
     const article = await Article.findById(req.params.id);
     if (!article) return res.status(404).send('Not found');
-    
-    Object.assign(article, req.body);
+
+    // Whitelist: an editor edits content, but status changes go through approve/return, not here.
+    const editable = ['title', 'summary', 'body', 'category', 'image'];
+    for (const field of editable) {
+      if (req.body[field] !== undefined) article[field] = req.body[field];
+    }
     await article.save();
     res.redirect(`/editor/articles/${article._id}`);
   } catch (err) {
@@ -66,7 +70,7 @@ async function approve(req, res, next) {
     article.published = {
       title: article.title,
       summary: article.summary,
-      content: article.content,
+      body: article.body,
       category: article.category,
       image: article.image
     };
