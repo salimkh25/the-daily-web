@@ -1,0 +1,39 @@
+<!-- views/partials/comments.ejs — [WORKED EXAMPLE ✅]
+     Server-renders the existing comments (so they're in the initial HTML), plus a form that
+     posts a new comment via Ajax (public/js/comments.js) and appends it WITHOUT a full reload.
+     Expects locals: `comments` (array) and `article` (with _id). -->
+<section class="comments" id="comments" data-article-id="<%= article._id %>">
+  <h2 class="section-flag-heading"><span class="section-flag">Comments</span> <span class="comments__count" id="comment-count"><%= comments.length %></span></h2>
+
+  <form class="comment-form" id="comment-form">
+    <div class="comment-form__row">
+      <label class="field">
+        <span class="field__label">Name</span>
+        <input class="field__input" type="text" name="author" maxlength="60" required />
+      </label>
+    </div>
+    <label class="field">
+      <span class="field__label">Comment</span>
+      <textarea class="field__input" name="body" rows="3" maxlength="1000" required></textarea>
+    </label>
+    <div class="comment-form__actions">
+      <button class="btn btn--primary" type="submit">Post comment</button>
+      <p class="form-message" id="comment-message" role="status" aria-live="polite"></p>
+    </div>
+  </form>
+
+  <ul class="comment-list" id="comment-list">
+    <% if (!comments.length) { %>
+      <li class="comment-empty" id="comment-empty">Be the first to comment.</li>
+    <% } %>
+    <% comments.forEach(function (c) { %>
+      <li class="comment">
+        <div class="comment__meta">
+          <span class="comment__author"><%= c.author %></span>
+          <time class="comment__time" datetime="<%= new Date(c.createdAt).toISOString() %>"><%= new Date(c.createdAt).toLocaleString('en-GB') %></time>
+        </div>
+        <p class="comment__body"><%= c.body %></p>
+      </li>
+    <% }); %>
+  </ul>
+</section>
