@@ -1,3 +1,7 @@
+// autosave for the reporter edit form
+// every time the reporter types something we wait 1 second then send it to the server
+// this way they never lose their work even if they close the tab or the power goes out
+
 const form = document.getElementById('article-form');
 const articleIdInput = document.getElementById('article-id');
 const indicator = document.getElementById('autosave-indicator');
@@ -7,10 +11,10 @@ if (form && articleIdInput) {
   let saveTimeout;
 
   const inputs = form.querySelectorAll('input, textarea');
-  
+
   const saveDraft = async () => {
     indicator.textContent = 'Saving...';
-    
+
     const data = {
       title: document.getElementById('field-title').value,
       category: document.getElementById('field-category').value,
@@ -22,12 +26,10 @@ if (form && articleIdInput) {
     try {
       const res = await fetch(`/reporter/articles/${articleId}/autosave`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      
+
       if (res.ok) {
         indicator.textContent = `Last saved at ${new Date().toLocaleTimeString()}`;
       } else {
@@ -39,11 +41,12 @@ if (form && articleIdInput) {
     }
   };
 
+  // debounce - only save after user stops typing for a sec
   inputs.forEach(input => {
     input.addEventListener('input', () => {
       indicator.textContent = 'Unsaved changes...';
       clearTimeout(saveTimeout);
-      saveTimeout = setTimeout(saveDraft, 1000); // 1s debounce
+      saveTimeout = setTimeout(saveDraft, 1000);
     });
   });
 }

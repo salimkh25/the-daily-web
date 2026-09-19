@@ -1,3 +1,7 @@
+// fetch weather from our own api endpoint and show it in the sidebar
+// the actual openweathermap call happens on the server, never from here
+// if something goes wrong we just show a friendly message, no crash
+
 document.addEventListener('DOMContentLoaded', async () => {
   const container = document.getElementById('weather-body');
   if (!container) return;
@@ -5,9 +9,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const res = await fetch('/api/weather');
     if (!res.ok) throw new Error('Weather fetch failed');
-    
+
     const data = await res.json();
-    
+
     container.innerHTML = `
       <div style="display: flex; align-items: center; gap: 1rem;">
         <img src="https://openweathermap.org/img/wn/${data.icon}@2x.png" alt="${data.description}" style="width: 50px; height: 50px;">

@@ -1,5 +1,6 @@
-// src/routes/reporter.js — [TODO — GUIDE step 9]  reporter workspace
-// Everything here must run behind requireRole('reporter') and enforce article ownership.
+// all reporter routes live here, everything is locked behind requireRole
+// ownership is enforced inside each controller function too just to be safe
+
 const router = require('express').Router();
 const { requireRole } = require('../middleware/auth');
 const reporterController = require('../controllers/reporterController');
@@ -10,7 +11,7 @@ router.get('/new', reporterController.newArticleForm);
 router.post('/articles', reporterController.create);
 router.get('/articles/:id/edit', reporterController.editForm);
 router.put('/articles/:id', reporterController.update);
-router.patch('/articles/:id/autosave', reporterController.autosave);
+router.patch('/articles/:id/autosave', reporterController.autosave); // called by editor.js on debounce
 router.post('/articles/:id/submit', reporterController.submit);
 
 module.exports = router;

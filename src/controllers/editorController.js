@@ -1,28 +1,10 @@
-// src/controllers/editorController.js — [TODO — you build this]
-//
-// The editor's management area. Runs behind requireRole('editor'). An editor can see and act
-// on EVERY article in the system.
-//
-//   dashboard(req, res, next)   GET  /editor                      -> all articles, filterable by status.
-//   review(req, res, next)      GET  /editor/articles/:id         -> view submitted content; when it's
-//                                                                    an edit to a published article, show
-//                                                                    BOTH the current public version and
-//                                                                    the pending new version.
-//   update(req, res, next)      PUT  /editor/articles/:id         -> editor edits the article themselves.
-//   approve(req, res, next)     POST /editor/articles/:id/approve -> 'pending' -> 'published'; the new
-//                                                                    content becomes the public version;
-//                                                                    record a publish/update marker for
-//                                                                    the Impact Analytics graph.
-//   returnForFixes(req,res,next)POST /editor/articles/:id/return  -> 'pending' -> 'returned' WITH a note
-//                                                                    (req.body.editorNote is required).
-//   remove(req, res, next)      DELETE /editor/articles/:id       -> delete an article.
-//
-// Enforce the allowed transitions on the server, same as the reporter side. Any illegal
-// transition returns a clear error rather than silently doing nothing.
+// editor controll - this is the management side, editors can see ALL articles
+// no ownership check here, they're the boss basically
+// status changes go thru specific endpoints (approve/return), not the general update
 
 const Article = require('../models/Article');
-const { recordView } = require('./statsController');
 
+// pulls every article in the system, sorted by recent changes
 async function dashboard(req, res, next) {
   try {
     const articles = await Article.find({}).sort({ updatedAt: -1 }).populate('author', 'displayName username');
@@ -32,6 +14,8 @@ async function dashboard(req, res, next) {
   }
 }
 
+// shows one article for the editor to look at
+// if the article was already published before, we show both versions side by side
 async function review(req, res, next) {
   try {
     const article = await Article.findById(req.params.id).populate('author', 'displayName');
@@ -42,12 +26,12 @@ async function review(req, res, next) {
   }
 }
 
+// editor can fix typos etc, but cant change status from here
 async function update(req, res, next) {
   try {
     const article = await Article.findById(req.params.id);
     if (!article) return res.status(404).send('Not found');
 
-    // Whitelist: an editor edits content, but status changes go through approve/return, not here.
     const editable = ['title', 'summary', 'body', 'category', 'image'];
     for (const field of editable) {
       if (req.body[field] !== undefined) article[field] = req.body[field];
@@ -59,14 +43,16 @@ async function update(req, res, next) {
   }
 }
 
+// approve and publish - copies the draft into the published subdoc
+// also saves a timestamp so the analytics graph can mark when this update happened
 async function approve(req, res, next) {
   try {
     const article = await Article.findById(req.params.id);
     if (!article) return res.status(404).send('Not found');
-    
+
     if (article.status !== 'pending') return res.status(400).send('Only pending articles can be approved');
 
-    // Move draft data to published subdocument
+    // snapshot the current draft into published
     article.published = {
       title: article.title,
       summary: article.summary,
@@ -74,12 +60,12 @@ async function approve(req, res, next) {
       category: article.category,
       image: article.image
     };
-    
+
     article.status = 'published';
     article.publishedAt = new Date();
-    article.editorNote = ''; // clear any existing return notes
-    
-    // Log for Impact Analytics graph (publishing/updating)
+    article.editorNote = ''; // wipe old notes
+
+    // push a timestamp for the analytics chart to show when this update went live
     article.updates = article.updates || [];
     article.updates.push(new Date());
 
@@ -90,23 +76,25 @@ async function approve(req, res, next) {
   }
 }
 
+// sends it back to the reporter with a note explaining whats wrong
 async function returnForFixes(req, res, next) {
   try {
     const article = await Article.findById(req.params.id);
     if (!article) return res.status(404).send('Not found');
-    
+
     if (article.status !== 'pending') return res.status(400).send('Only pending articles can be returned');
 
     article.status = 'returned';
     article.editorNote = req.body.editorNote || 'Please review and fix.';
     await article.save();
-    
+
     res.redirect('/editor');
   } catch (err) {
     next(err);
   }
 }
 
+// nukes the article completely
 async function remove(req, res, next) {
   try {
     await Article.findByIdAndDelete(req.params.id);

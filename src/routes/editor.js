@@ -1,5 +1,6 @@
-// src/routes/editor.js — [TODO — GUIDE steps 10-11]  editor management + analytics
-// Everything here must run behind requireRole('editor').
+// editor routes - same deal, everything locked behind requireRole('editor')
+// editors can see everything, reporters cant get in here
+
 const router = require('express').Router();
 const { requireRole } = require('../middleware/auth');
 const editorController = require('../controllers/editorController');
@@ -12,6 +13,6 @@ router.put('/articles/:id', editorController.update);
 router.post('/articles/:id/approve', editorController.approve);
 router.post('/articles/:id/return', editorController.returnForFixes);
 router.delete('/articles/:id', editorController.remove);
-router.get('/articles/:id/stats', statsController.renderStatsPage);
+router.get('/articles/:id/stats', statsController.renderStatsPage); // the chart page
 
 module.exports = router;
