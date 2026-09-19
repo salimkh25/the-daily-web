@@ -1,37 +1,179 @@
 <%- include('../partials/header', { title: 'Editor — The Daily Web' }) %>
 
-<!-- [TODO — GUIDE step 10] Editor management area.
-     Show ALL articles, filterable by status. For each pending article: view, edit, approve &
-     publish, or return for corrections (with a required note), and delete.
-     For an edit to an already-published article, show current-public vs pending-new. -->
-<section class="workspace">
+<section class="workspace workspace--editor">
   <div class="workspace__head">
-    <h1><span class="section-flag">Editor</span> All articles</h1>
+    <div>
+      <h1><span class="section-flag">Editor Desk</span> Article Management</h1>
+      <p class="meta">Manage publications, review workflow states, and track reader engagement</p>
+    </div>
+    <div class="workspace__head-actions">
+      <a href="/" class="btn btn--secondary" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Live Site
+      </a>
+    </div>
+  </div>
+
+  <!-- KPI Metrics Grid: Article counts on the site -->
+  <div class="stats-grid">
+    <div class="stat-card <%= (!currentStatus || currentStatus === 'all') ? 'is-active' : '' %>" data-filter-status="all" role="button" tabindex="0" aria-label="Filter by all articles">
+      <div class="stat-card__header">
+        <span class="stat-card__label">Total Articles</span>
+        <svg class="stat-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </div>
+      <div class="stat-card__value"><%= stats.total.toLocaleString() %></div>
+      <div class="stat-card__sub">All in system</div>
+    </div>
+
+    <div class="stat-card stat-card--pending <%= currentStatus === 'pending' ? 'is-active' : '' %>" data-filter-status="pending" role="button" tabindex="0" aria-label="Filter by pending articles">
+      <div class="stat-card__header">
+        <span class="stat-card__label">Pending Review</span>
+        <svg class="stat-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="stat-card__value"><%= stats.pending.toLocaleString() %></div>
+      <div class="stat-card__sub"><%= stats.pending > 0 ? 'Requires action' : 'Queue clear' %></div>
+    </div>
+
+    <div class="stat-card stat-card--published <%= currentStatus === 'published' ? 'is-active' : '' %>" data-filter-status="published" role="button" tabindex="0" aria-label="Filter by published articles">
+      <div class="stat-card__header">
+        <span class="stat-card__label">Published</span>
+        <svg class="stat-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <div class="stat-card__value"><%= stats.published.toLocaleString() %></div>
+      <div class="stat-card__sub">Live on site</div>
+    </div>
+
+    <div class="stat-card stat-card--returned <%= currentStatus === 'returned' ? 'is-active' : '' %>" data-filter-status="returned" role="button" tabindex="0" aria-label="Filter by returned articles">
+      <div class="stat-card__header">
+        <span class="stat-card__label">Returned</span>
+        <svg class="stat-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div class="stat-card__value"><%= stats.returned.toLocaleString() %></div>
+      <div class="stat-card__sub">Sent for fixes</div>
+    </div>
+
+    <div class="stat-card <%= currentStatus === 'draft' ? 'is-active' : '' %>" data-filter-status="draft" role="button" tabindex="0" aria-label="Filter by drafts">
+      <div class="stat-card__header">
+        <span class="stat-card__label">Drafts</span>
+        <svg class="stat-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </div>
+      <div class="stat-card__value"><%= stats.draft.toLocaleString() %></div>
+      <div class="stat-card__sub">In preparation</div>
+    </div>
+
+    <div class="stat-card stat-card--clicks" aria-label="Total reader impressions">
+      <div class="stat-card__header">
+        <span class="stat-card__label">Total Clicks</span>
+        <svg class="stat-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+      <div class="stat-card__value"><%= stats.totalClicks.toLocaleString() %></div>
+      <div class="stat-card__sub">Total impressions</div>
+    </div>
+  </div>
+
+  <!-- Control Bar: Search + Filter by Status + Filter by Genre + Sort by Clicks/Status/Genre -->
+  <div class="control-bar">
+    <div class="control-bar__search">
+      <svg class="control-bar__search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="search" id="editor-search" placeholder="Search by headline, summary, or reporter…" value="<%= currentSearch || '' %>" aria-label="Search articles" class="field__input" />
+    </div>
+
+    <div class="control-bar__filters">
+      <!-- Status Filter -->
+      <select id="editor-status" class="control-bar__select" aria-label="Filter by status">
+        <option value="all" <%= currentStatus === 'all' ? 'selected' : '' %>>All Statuses (<%= stats.total %>)</option>
+        <option value="pending" <%= currentStatus === 'pending' ? 'selected' : '' %>>Pending Approval (<%= stats.pending %>)</option>
+        <option value="published" <%= currentStatus === 'published' ? 'selected' : '' %>>Published (<%= stats.published %>)</option>
+        <option value="returned" <%= currentStatus === 'returned' ? 'selected' : '' %>>Returned (<%= stats.returned %>)</option>
+        <option value="draft" <%= currentStatus === 'draft' ? 'selected' : '' %>>Drafts (<%= stats.draft %>)</option>
+      </select>
+
+      <!-- Genre / Category Filter -->
+      <select id="editor-genre" class="control-bar__select" aria-label="Filter by genre">
+        <option value="all" <%= (!currentGenre || currentGenre === 'all') ? 'selected' : '' %>>All Genres</option>
+        <% stats.genres.forEach(function(g) { %>
+          <option value="<%= g.name %>" <%= (currentGenre && currentGenre.toLowerCase() === g.name.toLowerCase()) ? 'selected' : '' %>><%= g.name %> (<%= g.count %>)</option>
+        <% }); %>
+      </select>
+
+      <!-- Sort Option (Clicks / Status / Genre / Date) -->
+      <select id="editor-sort" class="control-bar__select" aria-label="Sort articles by">
+        <option value="updated" <%= (!currentSort || currentSort === 'updated') ? 'selected' : '' %>>Recently Updated</option>
+        <option value="views" <%= (currentSort === 'views' || currentSort === 'clicks' || currentSort === 'popular') ? 'selected' : '' %>>Most Clicked (Views)</option>
+        <option value="status" <%= currentSort === 'status' ? 'selected' : '' %>>Status (Pending First)</option>
+        <option value="genre" <%= (currentSort === 'genre' || currentSort === 'category') ? 'selected' : '' %>>Genre / Category (A–Z)</option>
+        <option value="oldest" <%= currentSort === 'oldest' ? 'selected' : '' %>>Oldest First</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="results-meta">
+    <div id="results-count">Showing <strong><%= articles.length %></strong> of <%= stats.total %> articles</div>
   </div>
   
   <% if (articles && articles.length > 0) { %>
-    <ul class="article-list">
+    <ul class="article-list" id="article-list">
       <% articles.forEach(function(article) { %>
-        <li class="article-list-item">
+        <li class="article-list-item" 
+            data-id="<%= article._id %>"
+            data-title="<%= (article.title || '').toLowerCase() %>"
+            data-author="<%= (article.author ? article.author.displayName : '').toLowerCase() %>"
+            data-status="<%= article.status %>"
+            data-genre="<%= (article.category || 'News').toLowerCase() %>"
+            data-views="<%= article.viewsCount || 0 %>"
+            data-updated="<%= new Date(article.updatedAt).getTime() %>">
+          
           <div class="article-info">
-            <h3><a href="/editor/articles/<%= article._id %>"><%= article.title || 'Untitled' %></a></h3>
-            <p class="meta">By <%= article.author ? article.author.displayName : 'Unknown' %> · Last updated: <%= new Date(article.updatedAt).toLocaleDateString('en-GB') %></p>
+            <div class="article-title-row">
+              <h3><a href="/editor/articles/<%= article._id %>"><%= article.title || 'Untitled' %></a></h3>
+            </div>
+            <div class="article-meta-row">
+              <span class="badge badge--genre"><%= article.category || 'News' %></span>
+              <span class="badge badge--views" title="<%= (article.viewsCount || 0).toLocaleString() %> total readers">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <%= (article.viewsCount || 0).toLocaleString() %> clicks
+              </span>
+              <span class="meta">By <%= article.author ? article.author.displayName : 'Staff' %> · Updated <%= new Date(article.updatedAt).toLocaleDateString('en-GB') %></span>
+            </div>
           </div>
+
           <div class="article-actions">
             <span class="chip chip--<%= article.status %>"><%= article.status %></span>
-            <% if (article.status === 'published') { %>
-              <a href="/editor/articles/<%= article._id %>/stats" class="btn btn--secondary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l3-3 3 3 4-5"/></svg>Analytics</a>
+
+            <% if (article.status === 'pending') { %>
+              <a href="/editor/articles/<%= article._id %>" class="btn btn--primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Review
+              </a>
+            <% } else { %>
+              <a href="/editor/articles/<%= article._id %>" class="btn btn--secondary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Edit
+              </a>
             <% } %>
-            <form action="/editor/articles/<%= article._id %>?_method=DELETE" method="POST" class="inline-form">
-              <button type="submit" class="btn btn--danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Delete</button>
+
+            <% if (article.status === 'published') { %>
+              <a href="/editor/articles/<%= article._id %>/stats" class="btn btn--secondary" title="View impact chart">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l3-3 3 3 4-5"/></svg>
+                Stats
+              </a>
+            <% } %>
+
+            <form action="/editor/articles/<%= article._id %>?_method=DELETE" method="POST" class="inline-form" onsubmit="return confirm('Permanently delete this article? This action cannot be undone.');">
+              <button type="submit" class="btn btn--danger" aria-label="Delete article">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                Delete
+              </button>
             </form>
           </div>
         </li>
       <% }) %>
     </ul>
+    <div id="no-results-msg" class="muted" style="display: none; padding: 40px; text-align: center;">No articles found matching the selected filter criteria.</div>
   <% } else { %>
     <p class="muted">No articles in the system.</p>
   <% } %>
 </section>
 
+<script src="/js/editor-dashboard.js" defer></script>
 <%- include('../partials/footer') %>
