@@ -16,11 +16,58 @@
 //   - Put ONLY non-sensitive identity in the session (id, role, displayName). The role in the
 //     session is the source of truth for permissions — never trust a role sent from the browser.
 
-const notImplemented = (label) => (req, res) =>
-  res.status(501).send(`${label} not implemented yet — see GUIDE.md`);
+const User = require('../models/User');
+
+function renderLogin(req, res) {
+  res.render('login', { error: null });
+}
+
+async function login(req, res, next) {
+  try {
+    const { username, password } = req.body;
+    
+    // Server-side validation
+    if (!username || !password) {
+      return res.render('login', { error: 'Invalid credentials' });
+    }
+
+    const user = await User.findOne({ username: username.trim().toLowerCase() });
+    
+    // Check user and password
+    if (!user || !(await user.comparePassword(password))) {
+      return res.render('login', { error: 'Invalid credentials' });
+    }
+
+    // Success! Store identity in session
+    req.session.user = {
+      id: user._id,
+      role: user.role,
+      displayName: user.displayName
+    };
+
+    // Redirect based on role
+    if (user.role === 'reporter') {
+      return res.redirect('/reporter');
+    } else if (user.role === 'editor') {
+      return res.redirect('/editor');
+    }
+    
+    // Fallback
+    res.redirect('/');
+  } catch (err) {
+    next(err);
+  }
+}
+
+function logout(req, res, next) {
+  req.session.destroy((err) => {
+    if (err) return next(err);
+    res.redirect('/');
+  });
+}
 
 module.exports = {
-  renderLogin: notImplemented('renderLogin'),
-  login: notImplemented('login'),
-  logout: notImplemented('logout'),
+  renderLogin,
+  login,
+  logout,
 };
