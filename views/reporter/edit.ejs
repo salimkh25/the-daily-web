@@ -5,8 +5,63 @@
      /reporter/articles/:id/autosave) so work survives refresh / browser close / another computer.
      When editing a PUBLISHED article, make clear the public still sees the approved version. -->
 <section class="editor-pane">
-  <h1><span class="section-flag">Reporter</span> Edit article</h1>
-  <p class="muted">TODO: build the article editor form + auto-save (public/js can host the debounce).</p>
+  <div class="workspace__head">
+    <h1><span class="section-flag">Reporter</span> <%= mode === 'create' ? 'New article' : 'Edit article' %></h1>
+    <% if (mode === 'edit') { %>
+      <span class="chip chip--<%= article.status %>"><%= article.status %></span>
+    <% } %>
+  </div>
+
+  <% if (article.status === 'published') { %>
+    <div class="scaffold-note">
+      <strong>Note:</strong> This article is already published. Your edits here will be saved as a pending draft. 
+      The public will continue to see the current live version until an editor approves your new changes.
+    </div>
+  <% } %>
+
+  <div id="autosave-indicator" class="meta" style="margin-bottom: 1rem; color: var(--color-text-muted);">
+    <%= mode === 'create' ? 'Draft will auto-save once created.' : 'All changes saved.' %>
+  </div>
+
+  <form id="article-form" action="<%= mode === 'create' ? '/reporter/articles' : `/reporter/articles/${article._id}?_method=PUT` %>" method="POST">
+    
+    <% if (mode === 'edit') { %>
+      <input type="hidden" id="article-id" value="<%= article._id %>">
+    <% } %>
+
+    <label class="field">
+      <span class="field__label">Title</span>
+      <input class="field__input" type="text" name="title" id="field-title" value="<%= article.title || '' %>" required <%= article.status === 'pending' ? 'disabled' : '' %>/>
+    </label>
+
+    <label class="field">
+      <span class="field__label">Category</span>
+      <input class="field__input" type="text" name="category" id="field-category" value="<%= article.category || '' %>" required <%= article.status === 'pending' ? 'disabled' : '' %>/>
+    </label>
+    
+    <label class="field">
+      <span class="field__label">Image URL (Optional)</span>
+      <input class="field__input" type="url" name="image" id="field-image" value="<%= article.image || '' %>" <%= article.status === 'pending' ? 'disabled' : '' %>/>
+    </label>
+
+    <label class="field">
+      <span class="field__label">Summary (1-2 lines)</span>
+      <textarea class="field__input" name="summary" id="field-summary" rows="2" required <%= article.status === 'pending' ? 'disabled' : '' %>><%= article.summary || '' %></textarea>
+    </label>
+
+    <label class="field">
+      <span class="field__label">Content</span>
+      <textarea class="field__input" name="content" id="field-content" rows="15" required <%= article.status === 'pending' ? 'disabled' : '' %>><%= article.content || '' %></textarea>
+    </label>
+
+    <% if (mode === 'create') { %>
+      <button class="btn btn--primary" type="submit">Create Draft</button>
+    <% } %>
+  </form>
 </section>
+
+<% if (mode === 'edit' && article.status !== 'pending') { %>
+  <script src="/js/editor.js" defer></script>
+<% } %>
 
 <%- include('../partials/footer') %>

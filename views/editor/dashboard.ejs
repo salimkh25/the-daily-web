@@ -8,7 +8,30 @@
   <div class="workspace__head">
     <h1><span class="section-flag">Editor</span> All articles</h1>
   </div>
-  <p class="muted">TODO: list every article with status filters and approve / return / delete actions.</p>
+  
+  <% if (articles && articles.length > 0) { %>
+    <ul class="article-list">
+      <% articles.forEach(function(article) { %>
+        <li class="article-list-item">
+          <div class="article-info">
+            <h3><a href="/editor/articles/<%= article._id %>"><%= article.title || 'Untitled' %></a></h3>
+            <p class="meta">By <%= article.author ? article.author.displayName : 'Unknown' %> · Last updated: <%= new Date(article.updatedAt).toLocaleDateString('en-GB') %></p>
+          </div>
+          <div class="article-actions">
+            <span class="chip chip--<%= article.status %>"><%= article.status %></span>
+            <% if (article.status === 'published') { %>
+              <a href="/editor/articles/<%= article._id %>/stats" class="btn btn--secondary">Analytics</a>
+            <% } %>
+            <form action="/editor/articles/<%= article._id %>?_method=DELETE" method="POST" style="display:inline;">
+              <button type="submit" class="btn btn--secondary" style="color: var(--color-danger);">Delete</button>
+            </form>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+  <% } else { %>
+    <p class="muted">No articles in the system.</p>
+  <% } %>
 </section>
 
 <%- include('../partials/footer') %>

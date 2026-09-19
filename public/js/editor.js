@@ -1,8 +1,49 @@
-// public/js/editor.js — [TODO — GUIDE step 11]  Impact Analytics chart
-//
-// On the editor stats page, fetch GET /api/articles/:id/stats and draw the chart in
-// #stats-chart: views over time, with a clear marker at each update-publish point.
-// Use Chart.js (include it in the view) OR the raw Canvas 2D API. Copy the fetch pattern
-// from comments.js.
+const form = document.getElementById('article-form');
+const articleIdInput = document.getElementById('article-id');
+const indicator = document.getElementById('autosave-indicator');
 
-// TODO: implement. Left empty so it loads without error.
+if (form && articleIdInput) {
+  const articleId = articleIdInput.value;
+  let saveTimeout;
+
+  const inputs = form.querySelectorAll('input, textarea');
+  
+  const saveDraft = async () => {
+    indicator.textContent = 'Saving...';
+    
+    const data = {
+      title: document.getElementById('field-title').value,
+      category: document.getElementById('field-category').value,
+      image: document.getElementById('field-image').value,
+      summary: document.getElementById('field-summary').value,
+      content: document.getElementById('field-content').value,
+    };
+
+    try {
+      const res = await fetch(`/reporter/articles/${articleId}/autosave`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (res.ok) {
+        indicator.textContent = `Last saved at ${new Date().toLocaleTimeString()}`;
+      } else {
+        indicator.textContent = 'Save failed. Retrying soon...';
+      }
+    } catch (err) {
+      console.error('Autosave error:', err);
+      indicator.textContent = 'Network error. Will retry...';
+    }
+  };
+
+  inputs.forEach(input => {
+    input.addEventListener('input', () => {
+      indicator.textContent = 'Unsaved changes...';
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(saveDraft, 1000); // 1s debounce
+    });
+  });
+}
