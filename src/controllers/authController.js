@@ -38,22 +38,27 @@ async function login(req, res, next) {
       return res.render('login', { error: 'Invalid credentials' });
     }
 
-    // Success! Store identity in session
-    req.session.user = {
-      id: user._id,
-      role: user.role,
-      displayName: user.displayName
-    };
+    // Success! Regenerate the session first so the pre-login session id can't be
+    // reused to hijack this logged-in session (prevents session fixation), then store
+    // identity and persist it before redirecting.
+    req.session.regenerate((regenErr) => {
+      if (regenErr) return next(regenErr);
 
-    // Redirect based on role
-    if (user.role === 'reporter') {
-      return res.redirect('/reporter');
-    } else if (user.role === 'editor') {
-      return res.redirect('/editor');
-    }
-    
-    // Fallback
-    res.redirect('/');
+      req.session.user = {
+        id: user._id,
+        role: user.role,
+        displayName: user.displayName
+      };
+
+      req.session.save((saveErr) => {
+        if (saveErr) return next(saveErr);
+
+        // Redirect based on role
+        if (user.role === 'reporter') return res.redirect('/reporter');
+        if (user.role === 'editor') return res.redirect('/editor');
+        res.redirect('/'); // fallback
+      });
+    });
   } catch (err) {
     next(err);
   }
