@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets — NEVER commit these (spec: no passwords / API keys / tokens in the repo)
+.env
+.env.local
+*.pem
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Runtime / OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Tooling output (not part of the project)
+graphify-out/
+.remember/
+
+# Course-provided assignment brief — kept local, not redistributed in a public repo
+*.pdf
+
+# Build output
+dist/
+build/

@@ -1,0 +1,22 @@
+{
+  "name": "the-daily-web",
+  "version": "0.1.0",
+  "description": "The Daily Web — a news management, editing and publishing platform (Node.js/Express/MongoDB/EJS, MVC).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js",
+    "dev": "node --env-file-if-exists=.env --watch server.js",
+    "seed": "node --env-file-if-exists=.env seed/seed.js"
+  },
+  "keywords": ["news", "express", "mongodb", "mongoose", "ejs", "mvc"],
+  "author": "salimkh25 and team",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "connect-mongo": "^5.1.0",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "mongoose": "^8.9.5"
+  }
+}
