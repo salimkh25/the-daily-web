@@ -78,12 +78,18 @@ async function seed() {
 
     const author = i % 3 === 0 ? reporter1._id : reporter2._id;
 
+    let category = scraped.category || 'News';
+    if (category === 'Tech') category = 'Technology';
+    if (/sport|football|soccer|tennis|nba|olympic|championship|cup|match|golf|cricket|racing|f1/i.test((scraped.title || '') + ' ' + (scraped.summary || ''))) {
+      category = 'Sport';
+    }
+
     const articleData = {
       title: scraped.title,
       summary: scraped.summary,
       body: scraped.content,    // the model uses `body`, scraper saves as `content`
       image: scraped.image,     // real BBC/Unsplash image url from scraper
-      category: scraped.category,
+      category,
       author,
       status,
     };
@@ -98,7 +104,7 @@ async function seed() {
         summary: scraped.summary,
         body: scraped.content,
         image: scraped.image,
-        category: scraped.category,
+        category,
       };
 
       // ~30% of published articles have been updated at least once (for the analytics graph)

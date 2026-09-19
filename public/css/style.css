@@ -255,3 +255,127 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); color: var(--ink); li
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ================================================================
+   15. Admin workspace — reporter & editor (Apple-influenced)
+   App-like chrome: system font, translucent materials, roomy
+   spacing, quiet surfaces, subtle press/hover motion. Vanilla CSS.
+   ================================================================ */
+:root {
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --shadow-1: 0 1px 2px rgba(15,23,42,.05), 0 2px 8px rgba(15,23,42,.06);
+  --shadow-2: 0 12px 34px rgba(15,23,42,.14);
+  --radius-lg: 14px;
+  /* aliases so older inline styles that used --color-* still resolve */
+  --color-primary: var(--red);
+  --color-surface: var(--surface);
+  --color-danger: #DC2626;
+  --color-text-muted: var(--muted);
+}
+
+.workspace, .editor-pane, .auth, .analytics { font-family: var(--font-ui); max-width: 940px; margin: 0 auto; }
+.workspace .meta, .editor-pane .meta { font-family: var(--font-ui); }
+
+/* Translucent sticky toolbar — content scrolls underneath */
+.workspace__head {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  margin: 0 0 22px; padding: 16px 2px;
+  background: rgba(248, 250, 252, .72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+.workspace__head h1 {
+  font-family: var(--font-ui); font-weight: 700; font-size: 1.4rem; letter-spacing: -.015em;
+  margin: 0; display: inline-flex; align-items: center; gap: .55rem;
+}
+
+/* Buttons: inline-flex so icons + text align; add secondary + danger */
+.workspace .btn, .editor-pane .btn, .auth .btn { display: inline-flex; align-items: center; gap: .4em; font-family: var(--font-ui); }
+.btn svg { width: 1.05em; height: 1.05em; flex: none; }
+.btn--secondary { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn--secondary:hover { border-color: #cbd5e1; background: #f8fafc; color: var(--ink); text-decoration: none; }
+.btn--danger { background: var(--surface); color: var(--red-deep); border-color: #fecaca; }
+.btn--danger:hover { background: var(--red-wash); border-color: var(--red); color: var(--red-deep); text-decoration: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .btn { transition: transform .12s ease, background-color .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  .btn:active { transform: scale(.97); }
+}
+
+/* Article list — one quiet surface, hairline-divided rows */
+.article-list {
+  list-style: none; margin: 0; padding: 0;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-1); overflow: hidden;
+}
+.article-list-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 16px 18px; border-top: 1px solid var(--line);
+}
+.article-list-item:first-child { border-top: none; }
+@media (prefers-reduced-motion: no-preference) { .article-list-item { transition: background-color .15s ease; } }
+.article-list-item:hover { background: #f8fafc; }
+.article-info { min-width: 0; }
+.article-info h3 { font-family: var(--font-ui); font-size: 1.02rem; font-weight: 600; letter-spacing: -.01em; margin: 0 0 .2rem; }
+.article-info h3 a { color: var(--ink); }
+.article-info h3 a:hover { color: var(--red); text-decoration: none; }
+.article-info .meta { font-size: .8rem; margin: 0; }
+.article-actions { display: flex; align-items: center; gap: 10px; flex: none; }
+.inline-form { display: inline; margin: 0; }
+
+/* Status chips get a leading dot */
+.chip { display: inline-flex; align-items: center; gap: .4em; }
+.chip::before { content: ""; width: .5em; height: .5em; border-radius: 50%; background: currentColor; }
+
+/* Empty state */
+.workspace > .muted, .editor-pane > .muted {
+  background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius-lg);
+  padding: 40px; text-align: center; font-family: var(--font-ui);
+}
+
+/* Edit / create sheet */
+.editor-pane .field { margin-bottom: 1.1rem; }
+.editor-pane .field__input {
+  font-family: var(--font-ui); font-size: 1rem; padding: .7em .85em; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.editor-pane .field__input:focus-visible { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-wash); outline: none; }
+.editor-pane textarea.field__input { line-height: 1.6; }
+#autosave-indicator {
+  display: inline-block; font-family: var(--font-ui); font-size: .8rem; color: var(--muted);
+  background: rgba(248,250,252,.8); backdrop-filter: blur(8px);
+  border: 1px solid var(--line); border-radius: 999px; padding: .3em .8em;
+}
+
+/* Review — current vs pending, as two materials */
+.review-grid { display: flex; flex-direction: column; gap: 20px; margin-top: 1.5rem; }
+.review-column { flex: 1; min-width: 0; }
+.review-column h2 { font-family: var(--font-ui); font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 .6rem; }
+.review-column .card { border-radius: var(--radius-lg); }
+.review-column:last-child .card { border: 1px solid var(--red); box-shadow: var(--shadow-2); }  /* pending = elevated + red accent */
+.review-column .card__body { display: block; }
+.review-column .card__title { font-family: var(--font-ui); margin: .4rem 0; }
+.review-column .card__body hr { border: none; border-top: 1px solid var(--line); margin: .8rem 0; }
+.review-column .card__body > div { font-family: var(--font-body); line-height: 1.7; color: #334155; }
+
+/* Review action bar — translucent */
+.review-actions {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-top: 1.5rem; padding: 14px 16px; border-radius: var(--radius-lg);
+  background: rgba(248,250,252,.75); backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid var(--line);
+}
+.review-actions .field__input { width: auto; flex: 1 1 240px; margin: 0; }
+
+/* Analytics card */
+.analytics .card { border-radius: var(--radius-lg); box-shadow: var(--shadow-1); }
+.analytics canvas { max-width: 100%; height: auto; }
+
+@media (min-width: 820px) {
+  .review-grid { flex-direction: row; }
+}
+
+/* When the OS asks for less transparency, make the materials solid */
+@media (prefers-reduced-transparency: reduce) {
+  .workspace__head, .review-actions, #autosave-indicator { background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}

@@ -29,15 +29,30 @@
     </div>
     <!-- The thick red rule: the signature element. -->
     <div class="masthead__rule"></div>
-    <!-- Category nav (BBC-style). TODO: render real categories from the DB. -->
+    <!-- Category nav (BBC-style). Real categories with dynamic active state -->
+    <% 
+      const activeCat = (typeof currentCategory !== 'undefined' && currentCategory) ? currentCategory.toLowerCase() : '';
+      const navSections = [
+        { name: 'World', slug: 'World' },
+        { name: 'Politics', slug: 'Politics' },
+        { name: 'Business', slug: 'Business' },
+        { name: 'Technology', slug: 'Technology', aliases: ['tech', 'technology'] },
+        { name: 'Sport', slug: 'Sport', aliases: ['sport', 'sports'] },
+        { name: 'Science', slug: 'Science' },
+        { name: 'Health', slug: 'Health' },
+        { name: 'Entertainment', slug: 'Entertainment', aliases: ['entertainment', 'culture'] }
+      ];
+    %>
     <nav class="catnav" aria-label="Sections">
       <div class="container catnav__inner">
-        <a class="catnav__link is-active" href="/">Home</a>
-        <a class="catnav__link" href="/?category=World">World</a>
-        <a class="catnav__link" href="/?category=Technology">Technology</a>
-        <a class="catnav__link" href="/?category=Business">Business</a>
-        <a class="catnav__link" href="/?category=Sport">Sport</a>
-        <a class="catnav__link" href="/?category=Culture">Culture</a>
+        <a class="catnav__link <%= activeCat === '' ? 'is-active' : '' %>" href="/" data-category="">Home</a>
+        <% navSections.forEach(function(sec) { 
+             const isAct = sec.aliases 
+               ? sec.aliases.includes(activeCat) 
+               : activeCat === sec.slug.toLowerCase();
+        %>
+          <a class="catnav__link <%= isAct ? 'is-active' : '' %>" href="/?category=<%= sec.slug %>" data-category="<%= sec.slug %>"><%= sec.name %></a>
+        <% }); %>
       </div>
     </nav>
   </header>

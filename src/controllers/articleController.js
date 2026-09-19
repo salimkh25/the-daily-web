@@ -42,23 +42,57 @@ function toPublicArticle(a) {
   return { ...a, title: p.title, summary: p.summary, body: p.body, image: p.image, category: p.category };
 }
 
+// helper to make category query filter with aliases (tech/technology, culture/entertainment, sport/sports)
+function buildCategoryFilter(category) {
+  if (!category) return null;
+  const cat = category.trim();
+  if (/^tech/i.test(cat)) {
+    return { $in: [/^tech/i, /^technology/i] };
+  }
+  if (/^(entertainment|culture)/i.test(cat)) {
+    return { $in: [/^entertainment/i, /^culture/i] };
+  }
+  if (/^sport/i.test(cat)) {
+    return { $in: [/^sport/i, /^sports/i] };
+  }
+  return new RegExp('^' + cat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i');
+}
+
 // GET / -> render 'home'
 async function renderHome(req, res, next) {
   try {
-    const raw = await Article.find({ publishedAt: { $ne: null } })
+    const category = (req.query.category || '').trim();
+    const query = { publishedAt: { $ne: null } };
+
+    const catFilter = buildCategoryFilter(category);
+    if (catFilter) {
+      query['published.category'] = catFilter;
+    }
+
+    const raw = await Article.find(query)
       .sort({ publishedAt: -1 })
       .limit(20)
       .populate('author', 'displayName')
       .lean();
     const articles = raw.map(toPublicArticle); // show the last approved content
 
-    // Top 3 go to the hero section, the rest to the feed
-    const hero = articles.slice(0, 3);
-    const feed = articles.slice(3);
+    // when on home show 3 hero items then the rest in feed
+    // if viewing a category, dont do hero so all category stories start right at the top
+    const hero = !category && articles.length >= 3 ? articles.slice(0, 3) : null;
+    const feed = !category && articles.length >= 3 ? articles.slice(3) : articles;
+
+    let displayCat = '';
+    if (category) {
+      if (/^tech/i.test(category)) displayCat = 'Technology';
+      else if (/^(entertainment|culture)/i.test(category)) displayCat = 'Entertainment';
+      else if (/^sport/i.test(category)) displayCat = 'Sport';
+      else displayCat = category;
+    }
 
     res.render('home', {
-      title: 'The Daily Web',
-      hero: hero.length > 0 ? hero : null,
+      title: displayCat ? `${displayCat} — The Daily Web` : 'The Daily Web',
+      currentCategory: displayCat || category,
+      hero,
       articles: feed
     });
   } catch (err) {
@@ -100,6 +134,14 @@ async function renderArticle(req, res, next) {
       { upsert: true }
     ).catch((err) => logger.error('view bucket increment failed:', err.message));
 
+    // remember viewed article in session for guest seen filter
+    if (req.session) {
+      if (!req.session.seenArticles) req.session.seenArticles = [];
+      if (!req.session.seenArticles.includes(id)) {
+        req.session.seenArticles.push(id);
+      }
+    }
+
     // Show the last approved content (from `published`).
     const mappedArticle = toPublicArticle(article);
 
@@ -127,7 +169,20 @@ async function list(req, res, next) {
     }
 
     if (req.query.category) {
-      query['published.category'] = req.query.category;
+      const catFilter = buildCategoryFilter(req.query.category);
+      if (catFilter) {
+        query['published.category'] = catFilter;
+      }
+    }
+
+    // viewed / not viewed filter (?seen=seen | ?seen=unseen)
+    if (req.query.seen && req.session && Array.isArray(req.session.seenArticles)) {
+      const seenIds = req.session.seenArticles.filter(id => mongoose.isValidObjectId(id));
+      if (req.query.seen === 'seen') {
+        query._id = { $in: seenIds };
+      } else if (req.query.seen === 'unseen') {
+        query._id = { $nin: seenIds };
+      }
     }
 
     let sort = { publishedAt: -1 };

@@ -10,46 +10,46 @@
 <div class="home">
   <div class="home__main">
     <!-- HERO: lead story + two secondary. -->
+    <% if (hero && hero.length > 0) { %>
     <section class="hero">
-      <% if (hero && hero.length > 0) { %>
-        <article class="hero__lead card">
-          <% if (hero[0].image) { %>
-            <img class="card__media" src="<%= hero[0].image %>" alt="<%= hero[0].title %>" />
-          <% } else { %>
-            <div class="card__media card__media--placeholder"></div>
-          <% } %>
+      <article class="hero__lead card">
+        <% if (hero[0].image) { %>
+          <img class="card__media" src="<%= hero[0].image %>" alt="<%= hero[0].title %>" />
+        <% } else { %>
+          <div class="card__media card__media--placeholder"></div>
+        <% } %>
+        <div class="card__body">
+          <span class="section-flag"><%= hero[0].category || 'Lead' %></span>
+          <h1 class="hero__title"><a href="/article/<%= hero[0]._id %>"><%= hero[0].title %></a></h1>
+          <p class="hero__summary"><%= hero[0].summary %></p>
+          <p class="meta">By <%= hero[0].author ? hero[0].author.displayName : 'Staff' %> · <%= new Date(hero[0].publishedAt).toLocaleDateString('en-GB') %></p>
+        </div>
+      </article>
+
+      <% if (hero.length > 1) { %>
+      <div class="hero__side">
+        <article class="card card--row">
           <div class="card__body">
-            <span class="section-flag"><%= hero[0].category || 'Lead' %></span>
-            <h1 class="hero__title"><a href="/article/<%= hero[0]._id %>"><%= hero[0].title %></a></h1>
-            <p class="hero__summary"><%= hero[0].summary %></p>
-            <p class="meta">By <%= hero[0].author ? hero[0].author.displayName : 'Staff' %> · <%= new Date(hero[0].publishedAt).toLocaleDateString('en-GB') %></p>
+            <span class="section-flag"><%= hero[1].category || 'News' %></span>
+            <h3 class="card__title"><a href="/article/<%= hero[1]._id %>"><%= hero[1].title %></a></h3>
+            <p class="meta">By <%= hero[1].author ? hero[1].author.displayName : 'Reporter' %></p>
           </div>
         </article>
-      <% } %>
-
-      <div class="hero__side">
-        <% if (hero && hero.length > 1) { %>
-          <article class="card card--row">
-            <div class="card__body">
-              <span class="section-flag"><%= hero[1].category || 'World' %></span>
-              <h3 class="card__title"><a href="/article/<%= hero[1]._id %>"><%= hero[1].title %></a></h3>
-              <p class="meta">By <%= hero[1].author ? hero[1].author.displayName : 'Reporter' %></p>
-            </div>
-          </article>
-        <% } %>
-        <% if (hero && hero.length > 2) { %>
-          <article class="card card--row">
-            <div class="card__body">
-              <span class="section-flag"><%= hero[2].category || 'Tech' %></span>
-              <h3 class="card__title"><a href="/article/<%= hero[2]._id %>"><%= hero[2].title %></a></h3>
-              <p class="meta">By <%= hero[2].author ? hero[2].author.displayName : 'Reporter' %></p>
-            </div>
-          </article>
+        <% if (hero.length > 2) { %>
+        <article class="card card--row">
+          <div class="card__body">
+            <span class="section-flag"><%= hero[2].category || 'News' %></span>
+            <h3 class="card__title"><a href="/article/<%= hero[2]._id %>"><%= hero[2].title %></a></h3>
+            <p class="meta">By <%= hero[2].author ? hero[2].author.displayName : 'Reporter' %></p>
+          </div>
+        </article>
         <% } %>
       </div>
+      <% } %>
     </section>
+    <% } %>
 
-    <!-- TOOLS: search / filter / sort. TODO: wire to /api/articles via public/js/feed.js. -->
+    <!-- TOOLS: search / filter / sort. -->
     <div class="feed-tools">
       <input class="field__input" id="feed-search" type="search" placeholder="Search articles…" aria-label="Search articles" />
       <select class="field__input" id="feed-sort" aria-label="Sort by">
@@ -59,7 +59,7 @@
     </div>
 
     <!-- FEED: card grid (Flexbox flex-wrap). -->
-    <h2 class="section-flag-heading"><span class="section-flag">Latest</span></h2>
+    <h2 class="section-flag-heading"><span class="section-flag"><%= (typeof currentCategory !== 'undefined' && currentCategory) ? (currentCategory.toLowerCase() === 'tech' ? 'Technology' : (currentCategory.toLowerCase() === 'culture' ? 'Entertainment' : currentCategory)) : 'Latest' %></span></h2>
     <div class="feed" id="feed">
       <% if (articles && articles.length > 0) { %>
         <% articles.forEach(function(article) { %>

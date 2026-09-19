@@ -1,29 +1,19 @@
-// public/js/feed.js — [TODO — GUIDE steps 6-7]  home feed interactivity
-//
-// Everything here talks to GET /api/articles and updates the #feed WITHOUT a full page refresh.
-// Copy the fetch pattern from comments.js.
-//
-// Build:
-//   1) SEARCH   — on input (debounced ~300ms), request ?search=... and replace the feed.
-//   2) FILTER   — category + viewed/not-viewed -> query params.
-//   3) SORT     — date | popular -> ?sort=.
-//   4) INFINITE SCROLL — watch #feed-sentinel with IntersectionObserver; when it enters view,
-//      request the next ?page= (20 per page) and APPEND the results. Stop when the server says
-//      there are no more.
-//
-// Keep one function that builds the query string from the current search/filter/sort/page state
-// so all four features share it. Render each article as a card (same markup as home.ejs) using
-// textContent / createElement — never innerHTML with server strings you didn't escape.
+// feed.js - client side search, sorting, category filtering and infinite scroll
+// talking to GET /api/articles without reloading the whole page
 
+const urlParams = new URLSearchParams(window.location.search);
 let currentPage = 1;
 let currentSearch = '';
 let currentSort = 'date';
+let currentCategory = urlParams.get('category') || '';
 let isLoading = false;
 
 const feedContainer = document.getElementById('feed');
 const sentinel = document.getElementById('feed-sentinel');
 const searchInput = document.getElementById('feed-search');
 const sortSelect = document.getElementById('feed-sort');
+const heroSection = document.querySelector('.hero');
+const headingFlag = document.querySelector('.section-flag-heading .section-flag');
 
 function createArticleCard(article) {
   const card = document.createElement('article');
@@ -46,7 +36,7 @@ function createArticleCard(article) {
 
   const flag = document.createElement('span');
   flag.className = 'section-flag';
-  flag.textContent = article.category;
+  flag.textContent = article.category || 'News';
   body.appendChild(flag);
 
   const title = document.createElement('h3');
@@ -59,13 +49,13 @@ function createArticleCard(article) {
 
   const summary = document.createElement('p');
   summary.className = 'card__summary';
-  summary.textContent = article.summary;
+  summary.textContent = article.summary || '';
   body.appendChild(summary);
 
   const meta = document.createElement('p');
   meta.className = 'meta';
   const authorName = article.author ? article.author.displayName : 'Reporter';
-  const dateStr = new Date(article.publishedAt).toLocaleDateString('en-GB');
+  const dateStr = article.publishedAt ? new Date(article.publishedAt).toLocaleDateString('en-GB') : '';
   meta.textContent = `By ${authorName} · ${dateStr}`;
   body.appendChild(meta);
 
@@ -73,6 +63,7 @@ function createArticleCard(article) {
   return card;
 }
 
+// pull articles from api and stick them in feed
 async function fetchFeed(append = false) {
   if (isLoading) return;
   isLoading = true;
@@ -83,6 +74,7 @@ async function fetchFeed(append = false) {
       sort: currentSort
     });
     if (currentSearch) params.set('search', currentSearch);
+    if (currentCategory) params.set('category', currentCategory);
 
     const res = await fetch(`/api/articles?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch articles');
@@ -90,17 +82,28 @@ async function fetchFeed(append = false) {
     const articles = await res.json();
 
     if (!append) {
-      feedContainer.innerHTML = ''; // Clear for new search/sort
+      feedContainer.innerHTML = ''; // wipe old stuff for fresh query
+    }
+
+    if (!append && articles.length === 0) {
+      const msg = document.createElement('p');
+      msg.className = 'muted';
+      msg.textContent = 'No articles found.';
+      feedContainer.appendChild(msg);
+      if (sentinel) sentinel.style.display = 'none';
+      return;
     }
 
     articles.forEach(article => {
       feedContainer.appendChild(createArticleCard(article));
     });
 
-    if (articles.length < 20) {
-      sentinel.style.display = 'none'; // No more items
-    } else {
-      sentinel.style.display = 'block';
+    if (sentinel) {
+      if (articles.length < 20) {
+        sentinel.style.display = 'none'; // hit the bottom
+      } else {
+        sentinel.style.display = 'block';
+      }
     }
   } catch (err) {
     console.error('Feed error:', err);
@@ -109,7 +112,89 @@ async function fetchFeed(append = false) {
   }
 }
 
-// Search (Debounced)
+// update active class on header nav links
+function updateNavHighlight(cat) {
+  const norm = (cat || '').toLowerCase();
+  document.querySelectorAll('.catnav__link').forEach(link => {
+    const linkCat = (link.getAttribute('data-category') || '').toLowerCase();
+    const isAct = (!norm && !linkCat) || (norm && (norm === linkCat || (norm === 'technology' && linkCat === 'tech') || (norm === 'tech' && linkCat === 'technology') || (norm === 'culture' && linkCat === 'entertainment') || (norm === 'entertainment' && linkCat === 'culture')));
+    if (isAct) {
+      link.classList.add('is-active');
+    } else {
+      link.classList.remove('is-active');
+    }
+  });
+}
+
+// category nav bar clicks - switch category without full page refresh
+document.querySelectorAll('.catnav__link').forEach(link => {
+  link.addEventListener('click', (e) => {
+    // only do ajax if we already on home page
+    if (window.location.pathname !== '/' && window.location.pathname !== '') {
+      return;
+    }
+
+    e.preventDefault();
+    const targetUrl = new URL(link.href, window.location.origin);
+    const chosenCat = targetUrl.searchParams.get('category') || '';
+
+    if (chosenCat === currentCategory && !currentSearch) {
+      return; // already looking at it
+    }
+
+    currentCategory = chosenCat;
+    currentSearch = '';
+    if (searchInput) searchInput.value = '';
+    currentPage = 1;
+
+    updateNavHighlight(currentCategory);
+    window.history.pushState({ category: currentCategory }, '', link.href);
+
+    if (headingFlag) {
+      let display = 'Latest';
+      if (currentCategory) {
+        display = currentCategory.toLowerCase() === 'tech' ? 'Technology' : currentCategory;
+      }
+      headingFlag.textContent = display;
+    }
+
+    if (heroSection) {
+      heroSection.style.display = currentCategory ? 'none' : '';
+    }
+
+    fetchFeed(false);
+  });
+});
+
+// handle back and forward buttons in browser
+window.addEventListener('popstate', () => {
+  if (window.location.pathname !== '/' && window.location.pathname !== '') {
+    return;
+  }
+  const params = new URLSearchParams(window.location.search);
+  currentCategory = params.get('category') || '';
+  currentSearch = '';
+  if (searchInput) searchInput.value = '';
+  currentPage = 1;
+
+  updateNavHighlight(currentCategory);
+
+  if (headingFlag) {
+    let display = 'Latest';
+    if (currentCategory) {
+      display = currentCategory.toLowerCase() === 'tech' ? 'Technology' : currentCategory;
+    }
+    headingFlag.textContent = display;
+  }
+
+  if (heroSection) {
+    heroSection.style.display = currentCategory ? 'none' : '';
+  }
+
+  fetchFeed(false);
+});
+
+// search with small debounce so we dont spam api
 let searchTimeout;
 if (searchInput) {
   searchInput.addEventListener('input', (e) => {
@@ -117,12 +202,18 @@ if (searchInput) {
     searchTimeout = setTimeout(() => {
       currentSearch = e.target.value.trim();
       currentPage = 1;
+
+      // hide hero while searching so user sees only matching results
+      if (heroSection) {
+        heroSection.style.display = (currentSearch || currentCategory) ? 'none' : '';
+      }
+
       fetchFeed(false);
     }, 300);
   });
 }
 
-// Sort
+// sort dropdown (date or popular)
 if (sortSelect) {
   sortSelect.addEventListener('change', (e) => {
     currentSort = e.target.value;
@@ -131,10 +222,10 @@ if (sortSelect) {
   });
 }
 
-// Infinite Scroll
+// infinite scroll observer - loads next batch when sentinel shows up
 if (sentinel && window.IntersectionObserver) {
   const observer = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting) {
+    if (entries[0].isIntersecting && !isLoading) {
       currentPage++;
       fetchFeed(true);
     }
