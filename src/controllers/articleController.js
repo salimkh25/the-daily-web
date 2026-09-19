@@ -62,6 +62,7 @@ function buildCategoryFilter(category) {
 async function renderHome(req, res, next) {
   try {
     const category = (req.query.category || '').trim();
+    const search = (req.query.search || '').trim();
     const query = { publishedAt: { $ne: null } };
 
     const catFilter = buildCategoryFilter(category);
@@ -69,17 +70,28 @@ async function renderHome(req, res, next) {
       query['published.category'] = catFilter;
     }
 
-    const raw = await Article.find(query)
-      .sort({ publishedAt: -1 })
+    if (search) {
+      query.$text = { $search: search };
+    }
+
+    let sort = { publishedAt: -1 };
+    let projection = {};
+    if (search) {
+      projection = { score: { $meta: 'textScore' } };
+      sort = { score: { $meta: 'textScore' } };
+    }
+
+    const raw = await Article.find(query, projection)
+      .sort(sort)
       .limit(20)
       .populate('author', 'displayName')
       .lean();
     const articles = raw.map(toPublicArticle); // show the last approved content
 
     // when on home show 3 hero items then the rest in feed
-    // if viewing a category, dont do hero so all category stories start right at the top
-    const hero = !category && articles.length >= 3 ? articles.slice(0, 3) : null;
-    const feed = !category && articles.length >= 3 ? articles.slice(3) : articles;
+    // if viewing a category or searching, dont do hero so all matching stories start right at the top
+    const hero = (!category && !search && articles.length >= 3) ? articles.slice(0, 3) : null;
+    const feed = (!category && !search && articles.length >= 3) ? articles.slice(3) : articles;
 
     let displayCat = '';
     if (category) {
@@ -89,9 +101,17 @@ async function renderHome(req, res, next) {
       else displayCat = category;
     }
 
+    let pageTitle = 'The Daily Web';
+    if (search) {
+      pageTitle = `Search: "${search}" — The Daily Web`;
+    } else if (displayCat) {
+      pageTitle = `${displayCat} — The Daily Web`;
+    }
+
     res.render('home', {
-      title: displayCat ? `${displayCat} — The Daily Web` : 'The Daily Web',
+      title: pageTitle,
       currentCategory: displayCat || category,
+      currentSearch: search,
       hero,
       articles: feed
     });

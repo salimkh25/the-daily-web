@@ -3,8 +3,8 @@
 
 const urlParams = new URLSearchParams(window.location.search);
 let currentPage = 1;
-let currentSearch = '';
-let currentSort = 'date';
+let currentSearch = urlParams.get('search') || '';
+let currentSort = urlParams.get('sort') || 'date';
 let currentCategory = urlParams.get('category') || '';
 let isLoading = false;
 
@@ -14,6 +14,13 @@ const searchInput = document.getElementById('feed-search');
 const sortSelect = document.getElementById('feed-sort');
 const heroSection = document.querySelector('.hero');
 const headingFlag = document.querySelector('.section-flag-heading .section-flag');
+const searchForm = document.querySelector('.masthead__search');
+
+// if arriving with an active search query, update the hero and heading
+if (currentSearch) {
+  if (heroSection) heroSection.style.display = 'none';
+  if (headingFlag) headingFlag.textContent = `Search: "${currentSearch}"`;
+}
 
 function createArticleCard(article) {
   const card = document.createElement('article');
@@ -194,6 +201,39 @@ window.addEventListener('popstate', () => {
   fetchFeed(false);
 });
 
+// title bar search submit handling
+if (searchForm) {
+  searchForm.addEventListener('submit', (e) => {
+    // on home page, intercept submit so we dont do a full page reload
+    if (window.location.pathname === '/' || window.location.pathname === '') {
+      e.preventDefault();
+      clearTimeout(searchTimeout);
+      currentSearch = searchInput ? searchInput.value.trim() : '';
+      currentPage = 1;
+
+      if (heroSection) {
+        heroSection.style.display = (currentSearch || currentCategory) ? 'none' : '';
+      }
+
+      if (headingFlag) {
+        if (currentSearch) {
+          headingFlag.textContent = `Search: "${currentSearch}"`;
+        } else {
+          headingFlag.textContent = currentCategory ? (currentCategory === 'Tech' ? 'Technology' : currentCategory) : 'Latest';
+        }
+      }
+
+      const query = new URLSearchParams();
+      if (currentSearch) query.set('search', currentSearch);
+      if (currentCategory) query.set('category', currentCategory);
+      if (currentSort && currentSort !== 'date') query.set('sort', currentSort);
+      window.history.replaceState({}, '', query.toString() ? `/?${query.toString()}` : '/');
+
+      fetchFeed(false);
+    }
+  });
+}
+
 // search with small debounce so we dont spam api
 let searchTimeout;
 if (searchInput) {
@@ -208,8 +248,22 @@ if (searchInput) {
         heroSection.style.display = (currentSearch || currentCategory) ? 'none' : '';
       }
 
+      if (headingFlag) {
+        if (currentSearch) {
+          headingFlag.textContent = `Search: "${currentSearch}"`;
+        } else {
+          headingFlag.textContent = currentCategory ? (currentCategory === 'Tech' ? 'Technology' : currentCategory) : 'Latest';
+        }
+      }
+
+      const query = new URLSearchParams();
+      if (currentSearch) query.set('search', currentSearch);
+      if (currentCategory) query.set('category', currentCategory);
+      if (currentSort && currentSort !== 'date') query.set('sort', currentSort);
+      window.history.replaceState({}, '', query.toString() ? `/?${query.toString()}` : '/');
+
       fetchFeed(false);
-    }, 300);
+    }, 250);
   });
 }
 
