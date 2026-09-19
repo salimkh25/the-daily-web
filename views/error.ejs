@@ -1,9 +1,9 @@
-<%- include('partials/header', { title: (status || 'Error') + ' — The Daily Web' }) %>
+<%- include('partials/header', { title: (locals.status || 'Error') + ' — The Daily Web' }) %>
 
 <section class="error-page">
   <span class="section-flag">Error</span>
-  <h1 class="error-page__code"><%= status %></h1>
-  <p class="error-page__message"><%= message %></p>
+  <h1 class="error-page__code"><%= locals.status || 'Error' %></h1>
+  <p class="error-page__message"><%= locals.message || 'Something went wrong.' %></p>
   <a class="btn btn--primary" href="/">Back to the front page</a>
 </section>
 
