@@ -17,13 +17,51 @@
 // rather than charting raw per-view rows. Do the bucketing at write time (increment a counter)
 // or with a MongoDB aggregation pipeline at read time — decide and be able to justify it.
 
-const notImplemented = (label) => (req, res) =>
-  res.status(501).json({ error: `${label} not implemented yet — see GUIDE.md` });
+const View = require('../models/View');
+const Article = require('../models/Article');
+
+async function recordView(articleId) {
+  try {
+    const bucket = new Date();
+    bucket.setMinutes(0, 0, 0); // truncate to the hour
+
+    await View.updateOne(
+      { article: articleId, bucket },
+      { $inc: { count: 1 } },
+      { upsert: true }
+    );
+  } catch (err) {
+    console.error('Error recording view:', err);
+  }
+}
+
+async function articleStats(req, res, next) {
+  try {
+    const article = await Article.findById(req.params.id);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+
+    const views = await View.find({ article: req.params.id }).sort({ bucket: 1 });
+
+    const series = views.map(v => ({
+      t: v.bucket,
+      views: v.count
+    }));
+
+    res.json({
+      series,
+      updates: article.updates || []
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+function renderStatsPage(req, res) {
+  res.render('editor/stats', { articleId: req.params.id });
+}
 
 module.exports = {
-  // recordView is called internally, not as a route — implement it to accept an articleId.
-  recordView: async (_articleId) => { /* TODO: increment view bucket */ },
-  articleStats: notImplemented('articleStats'),
-  renderStatsPage: (req, res) =>
-    res.status(501).send('stats page not implemented yet — see GUIDE.md'),
+  recordView,
+  articleStats,
+  renderStatsPage,
 };

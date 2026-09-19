@@ -7,6 +7,7 @@ const path = require('path');
 const express = require('express');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
+const methodOverride = require('method-override');
 
 const connectDB = require('./config/db');
 const logger = require('./src/utils/logger');
@@ -29,6 +30,9 @@ app.set('views', path.join(__dirname, 'views'));
 // --- Body parsing (built into Express 4.16+) ---
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// --- Method override (lets HTML forms send PUT/DELETE via ?_method=PUT) ---
+app.use(methodOverride('_method'));
 
 // --- Static assets (/css, /js, images) ---
 app.use(express.static(path.join(__dirname, 'public')));

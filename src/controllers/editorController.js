@@ -20,14 +20,107 @@
 // Enforce the allowed transitions on the server, same as the reporter side. Any illegal
 // transition returns a clear error rather than silently doing nothing.
 
-const notImplemented = (label) => (req, res) =>
-  res.status(501).send(`${label} not implemented yet — see GUIDE.md`);
+const Article = require('../models/Article');
+const { recordView } = require('./statsController');
+
+async function dashboard(req, res, next) {
+  try {
+    const articles = await Article.find({}).sort({ updatedAt: -1 }).populate('author', 'displayName username');
+    res.render('editor/dashboard', { articles });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function review(req, res, next) {
+  try {
+    const article = await Article.findById(req.params.id).populate('author', 'displayName');
+    if (!article) return res.status(404).send('Not found');
+    res.render('editor/review', { article });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function update(req, res, next) {
+  try {
+    const article = await Article.findById(req.params.id);
+    if (!article) return res.status(404).send('Not found');
+
+    // Whitelist: an editor edits content, but status changes go through approve/return, not here.
+    const editable = ['title', 'summary', 'body', 'category', 'image'];
+    for (const field of editable) {
+      if (req.body[field] !== undefined) article[field] = req.body[field];
+    }
+    await article.save();
+    res.redirect(`/editor/articles/${article._id}`);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function approve(req, res, next) {
+  try {
+    const article = await Article.findById(req.params.id);
+    if (!article) return res.status(404).send('Not found');
+    
+    if (article.status !== 'pending') return res.status(400).send('Only pending articles can be approved');
+
+    // Move draft data to published subdocument
+    article.published = {
+      title: article.title,
+      summary: article.summary,
+      body: article.body,
+      category: article.category,
+      image: article.image
+    };
+    
+    article.status = 'published';
+    article.publishedAt = new Date();
+    article.editorNote = ''; // clear any existing return notes
+    
+    // Log for Impact Analytics graph (publishing/updating)
+    article.updates = article.updates || [];
+    article.updates.push(new Date());
+
+    await article.save();
+    res.redirect('/editor');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function returnForFixes(req, res, next) {
+  try {
+    const article = await Article.findById(req.params.id);
+    if (!article) return res.status(404).send('Not found');
+    
+    if (article.status !== 'pending') return res.status(400).send('Only pending articles can be returned');
+
+    article.status = 'returned';
+    article.editorNote = req.body.editorNote || 'Please review and fix.';
+    await article.save();
+    
+    res.redirect('/editor');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function remove(req, res, next) {
+  try {
+    await Article.findByIdAndDelete(req.params.id);
+    res.redirect('/editor');
+  } catch (err) {
+    next(err);
+  }
+}
 
 module.exports = {
-  dashboard: notImplemented('editor dashboard'),
-  review: notImplemented('editor review'),
-  update: notImplemented('editor update'),
-  approve: notImplemented('approve'),
-  returnForFixes: notImplemented('returnForFixes'),
-  remove: notImplemented('editor remove'),
+  dashboard,
+  review,
+  update,
+  approve,
+  returnForFixes,
+  remove,
 };

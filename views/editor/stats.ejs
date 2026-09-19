@@ -4,10 +4,75 @@
      Draw a chart of views over time for the selected article, with clear markers at each point
      an editor published an update, so you can read how views changed before vs after an update.
      Use Chart.js OR a <canvas> you draw yourself. Fetch the data from /api/articles/:id/stats. -->
-<section class="analytics">
-  <h1><span class="section-flag">Impact Analytics</span></h1>
-  <canvas id="stats-chart" width="800" height="360" aria-label="Views over time"></canvas>
-  <p class="muted">TODO: fetch /api/articles/:id/stats and render the chart (public/js — e.g. editor.js).</p>
+<section class="workspace">
+  <div class="workspace__head">
+    <h1><span class="section-flag">Editor</span> Impact Analytics</h1>
+    <a class="btn btn--secondary" href="/editor">Back to Dashboard</a>
+  </div>
+
+  <div class="card" style="padding: 2rem;">
+    <canvas id="impact-chart" width="800" height="400"></canvas>
+  </div>
 </section>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  async function loadStats() {
+    try {
+      const res = await fetch('/api/articles/<%= articleId %>/stats');
+      const data = await res.json();
+      
+      const labels = data.series.map(s => new Date(s.t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' }));
+      const values = data.series.map(s => s.views);
+      
+      // Annotations for updates (a bit complex in raw Chart.js without plugins, so we'll add them as a separate scatter dataset or vertical lines if we used an annotation plugin, but for simplicity we'll just log them or add a second dataset)
+      // A simple way is to add a scatter dataset for update points
+      const updatePoints = data.updates.map(u => {
+        // Find closest hour
+        const ut = new Date(u).getTime();
+        let closestIdx = 0;
+        let minDiff = Infinity;
+        data.series.forEach((s, i) => {
+          const diff = Math.abs(new Date(s.t).getTime() - ut);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIdx = i;
+          }
+        });
+        return { x: labels[closestIdx], y: values[closestIdx] || 0 };
+      });
+
+      const ctx = document.getElementById('impact-chart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Views per Hour',
+              data: values,
+              borderColor: '#DC2626',
+              backgroundColor: 'rgba(220, 38, 38, 0.1)',
+              fill: true,
+              tension: 0.2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    } catch (err) {
+      console.error('Failed to load stats', err);
+    }
+  }
+  
+  loadStats();
+</script>
 
 <%- include('../partials/footer') %>

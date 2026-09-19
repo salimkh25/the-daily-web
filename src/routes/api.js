@@ -19,8 +19,8 @@ const articleController = require('../controllers/articleController');
 router.get('/articles', articleController.list); // ?page= &search= &category= &sort= &seen=
 
 // ---- Stats (TODO — GUIDE step 11) ----
-// const statsController = require('../controllers/statsController');
-// router.get('/articles/:id/stats', statsController.articleStats);
+const statsController = require('../controllers/statsController');
+router.get('/articles/:id/stats', statsController.articleStats);
 
 // ---- Weather (TODO — GUIDE step 12) ----
 // router.get('/weather', weatherController.current);

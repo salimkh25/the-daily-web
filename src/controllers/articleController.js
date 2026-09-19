@@ -33,15 +33,24 @@ const Article = require('../models/Article');
 const View = require('../models/View');
 const Comment = require('../models/Comment');
 
+// The public always sees the last APPROVED version, which lives in `published`.
+// This maps that onto the fields the views/JSON expect. An article "is public" once it
+// has a publishedAt date — even while a newer edit sits in `pending`.
+function toPublicArticle(a) {
+  const p = a.published || {};
+  return { ...a, title: p.title, summary: p.summary, body: p.body, image: p.image, category: p.category };
+}
+
 // GET / -> render 'home'
 async function renderHome(req, res, next) {
   try {
-    const articles = await Article.find({ status: 'published' })
+    const raw = await Article.find({ publishedAt: { $ne: null } })
       .sort({ publishedAt: -1 })
       .limit(20)
       .populate('author', 'displayName')
       .lean();
-    
+    const articles = raw.map(toPublicArticle); // show the last approved content
+
     // Top 3 go to the hero section, the rest to the feed
     const hero = articles.slice(0, 3);
     const feed = articles.slice(3);
@@ -64,7 +73,7 @@ async function renderArticle(req, res, next) {
       return res.status(404).render('error', { message: 'Article not found' });
     }
 
-    const article = await Article.findOne({ _id: id, status: 'published' })
+    const article = await Article.findOne({ _id: id, publishedAt: { $ne: null } })
       .populate('author', 'displayName')
       .lean();
 
@@ -89,15 +98,8 @@ async function renderArticle(req, res, next) {
       { upsert: true }
     ).catch(console.error);
 
-    // Map `published` object back to root fields for EJS template compatibility
-    const mappedArticle = {
-      ...article,
-      title: article.published.title,
-      summary: article.published.summary,
-      body: article.published.body,
-      image: article.published.image,
-      category: article.published.category
-    };
+    // Show the last approved content (from `published`).
+    const mappedArticle = toPublicArticle(article);
 
     res.render('article', {
       title: `${mappedArticle.title} — The Daily Web`,
@@ -116,14 +118,14 @@ async function list(req, res, next) {
     const limit = parseInt(req.query.limit, 10) || 20;
     const skip = (page - 1) * limit;
 
-    const query = { status: 'published' };
-    
+    const query = { publishedAt: { $ne: null } };
+
     if (req.query.search) {
       query.$text = { $search: req.query.search };
     }
-    
+
     if (req.query.category) {
-      query.category = req.query.category;
+      query['published.category'] = req.query.category;
     }
 
     let sort = { publishedAt: -1 };
@@ -141,15 +143,8 @@ async function list(req, res, next) {
       .populate('author', 'displayName')
       .lean();
 
-    // Map `published` object back to root fields for the frontend
-    const mappedArticles = articles.map(a => ({
-      ...a,
-      title: a.published.title,
-      summary: a.published.summary,
-      body: a.published.body,
-      image: a.published.image,
-      category: a.published.category
-    }));
+    // Show the last approved content (from `published`).
+    const mappedArticles = articles.map(toPublicArticle);
 
     res.json(mappedArticles);
   } catch (err) {

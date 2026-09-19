@@ -51,6 +51,7 @@ const articleSchema = new mongoose.Schema({
   editorNote: { type: String, trim: true, default: '' },
   publishedAt:{ type: Date, index: true },
   viewsCount: { type: Number, default: 0, index: true },
+  updates:    [{ type: Date }], // timestamps of each editor publish/update — Impact Analytics markers
 
   // Live Published Version (copied from draft upon approval)
   published:  { type: publishedSchema, default: {} }

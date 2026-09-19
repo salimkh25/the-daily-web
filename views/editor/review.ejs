@@ -1,0 +1,71 @@
+<%- include('../partials/header', { title: 'Review article — The Daily Web' }) %>
+
+<section class="editor-pane">
+  <div class="workspace__head">
+    <h1><span class="section-flag">Editor</span> Review article</h1>
+    <span class="chip chip--<%= article.status %>"><%= article.status %></span>
+  </div>
+
+  <p class="meta">By <%= article.author ? article.author.displayName : 'Unknown' %> · Last updated: <%= new Date(article.updatedAt).toLocaleDateString('en-GB') %></p>
+
+  <div class="review-grid">
+    <% if (article.published && article.published.title) { %>
+      <!-- Compare mode -->
+      <div class="review-column">
+        <h2>Currently Published</h2>
+        <div class="card">
+          <div class="card__body">
+            <span class="section-flag"><%= article.published.category %></span>
+            <h3 class="card__title"><%= article.published.title %></h3>
+            <p class="card__summary"><strong>Summary:</strong> <%= article.published.summary %></p>
+            <hr>
+            <div style="white-space: pre-wrap;"><%= article.published.body %></div>
+          </div>
+        </div>
+      </div>
+    <% } %>
+
+    <div class="review-column">
+      <h2>Pending Draft</h2>
+      <div class="card" style="border: 1px solid var(--color-primary);">
+        <div class="card__body">
+          <span class="section-flag"><%= article.category %></span>
+          <h3 class="card__title"><%= article.title %></h3>
+          <p class="card__summary"><strong>Summary:</strong> <%= article.summary %></p>
+          <hr>
+          <div style="white-space: pre-wrap;"><%= article.body %></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <% if (article.status === 'pending') { %>
+    <div class="review-actions" style="margin-top: 2rem; padding: 1rem; background: var(--color-surface); border-radius: 4px;">
+      
+      <!-- Approve -->
+      <form action="/editor/articles/<%= article._id %>/approve" method="POST" style="display:inline-block; margin-right: 1rem;">
+        <button type="submit" class="btn btn--primary">Approve & Publish</button>
+      </form>
+
+      <!-- Return -->
+      <form action="/editor/articles/<%= article._id %>/return" method="POST" style="display:inline-block;">
+        <input type="text" name="editorNote" placeholder="Reason for returning..." required class="field__input" style="display:inline-block; width: 300px; margin-right: 0.5rem;">
+        <button type="submit" class="btn btn--secondary">Return for Fixes</button>
+      </form>
+    </div>
+  <% } %>
+</section>
+
+<style>
+  .review-grid {
+    display: flex;
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+  .review-column {
+    flex: 1;
+    min-width: 0; /* prevents flex blowout */
+  }
+</style>
+
+<%- include('../partials/footer') %>
