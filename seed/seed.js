@@ -47,14 +47,14 @@ async function seed() {
     const category = r(categories);
     const title = `Demo Article ${i} on ${category}`;
     const summary = `Short summary for article ${i} about ${category}.`;
-    const content = `Full content for article ${i}.\n\nThis is the second paragraphe with more info about ${category}.`;
+    const body = `Full content for article ${i}.\n\nThis is the second paragraphe with more info about ${category}.`;
     const image = `https://picsum.photos/seed/${i}/800/400`;
 
-    const articleData = { title, summary, content, category, image, author, status };
+    const articleData = { title, summary, body, category, image, author, status };
 
     if (status === 'published') {
       articleData.publishedAt = new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000);
-      articleData.published = { title, summary, content, category, image };
+      articleData.published = { title, summary, body, category, image };
 
       // some articles got updated after first publish - needed for the analytics graph
       if (Math.random() < 0.3) {
@@ -77,7 +77,7 @@ async function seed() {
     if (doc.status === 'published' && Math.random() < 0.5) {
       await Comment.create({
         article: doc._id,
-        authorName: 'Guest Reader',
+        author: 'Guest Reader',
         body: `Great article on ${doc.category}!`
       });
     }
@@ -89,7 +89,7 @@ async function seed() {
         bucket.setHours(bucket.getHours() + j, 0, 0, 0);
         await View.create({
           article: doc._id,
-          hour: bucket,
+          bucket,
           count: Math.floor(Math.random() * 20) + 1
         });
       }

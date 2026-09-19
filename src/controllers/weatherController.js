@@ -1,8 +1,7 @@
 // weather widget - we proxy the openweathermap api from the server
 // so we never expose our api key to the browser
 // also we cache the result for 15 min so we dont hammer the free tier
-
-const fetch = require('node-fetch');
+// node has fetch built in now so we dont need the node-fetch package
 
 // simple in-memory cache, just an object with the data and when we last fetched
 let cache = {
