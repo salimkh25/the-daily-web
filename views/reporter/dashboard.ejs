@@ -7,7 +7,7 @@
 <section class="workspace">
   <div class="workspace__head">
     <h1><span class="section-flag">Reporter</span> My articles</h1>
-    <a class="btn btn--primary" href="/reporter/new">New article</a>
+    <a class="btn btn--primary" href="/reporter/new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New article</a>
   </div>
   
   <% if (articles && articles.length > 0) { %>
@@ -24,8 +24,8 @@
           <div class="article-actions">
             <span class="chip chip--<%= article.status %>"><%= article.status %></span>
             <% if (article.status === 'draft' || article.status === 'returned' || article.status === 'published') { %>
-              <form action="/reporter/articles/<%= article._id %>/submit" method="POST" style="display:inline;">
-                <button type="submit" class="btn btn--secondary">Submit for Review</button>
+              <form action="/reporter/articles/<%= article._id %>/submit" method="POST" class="inline-form">
+                <button type="submit" class="btn btn--secondary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>Submit for Review</button>
               </form>
             <% } %>
           </div>

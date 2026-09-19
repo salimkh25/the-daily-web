@@ -27,7 +27,7 @@
 
     <div class="review-column">
       <h2>Pending Draft</h2>
-      <div class="card" style="border: 1px solid var(--color-primary);">
+      <div class="card">
         <div class="card__body">
           <span class="section-flag"><%= article.category %></span>
           <h3 class="card__title"><%= article.title %></h3>
@@ -40,32 +40,19 @@
   </div>
 
   <% if (article.status === 'pending') { %>
-    <div class="review-actions" style="margin-top: 2rem; padding: 1rem; background: var(--color-surface); border-radius: 4px;">
-      
+    <div class="review-actions">
       <!-- Approve -->
-      <form action="/editor/articles/<%= article._id %>/approve" method="POST" style="display:inline-block; margin-right: 1rem;">
-        <button type="submit" class="btn btn--primary">Approve & Publish</button>
+      <form action="/editor/articles/<%= article._id %>/approve" method="POST" class="inline-form">
+        <button type="submit" class="btn btn--primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Approve &amp; Publish</button>
       </form>
 
       <!-- Return -->
-      <form action="/editor/articles/<%= article._id %>/return" method="POST" style="display:inline-block;">
-        <input type="text" name="editorNote" placeholder="Reason for returning..." required class="field__input" style="display:inline-block; width: 300px; margin-right: 0.5rem;">
-        <button type="submit" class="btn btn--secondary">Return for Fixes</button>
+      <form action="/editor/articles/<%= article._id %>/return" method="POST" class="inline-form" style="display:flex; gap:8px; flex:1 1 320px;">
+        <input type="text" name="editorNote" placeholder="Reason for returning..." required class="field__input">
+        <button type="submit" class="btn btn--secondary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>Return for Fixes</button>
       </form>
     </div>
   <% } %>
 </section>
-
-<style>
-  .review-grid {
-    display: flex;
-    gap: 2rem;
-    margin-top: 2rem;
-  }
-  .review-column {
-    flex: 1;
-    min-width: 0; /* prevents flex blowout */
-  }
-</style>
 
 <%- include('../partials/footer') %>

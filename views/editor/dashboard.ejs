@@ -20,10 +20,10 @@
           <div class="article-actions">
             <span class="chip chip--<%= article.status %>"><%= article.status %></span>
             <% if (article.status === 'published') { %>
-              <a href="/editor/articles/<%= article._id %>/stats" class="btn btn--secondary">Analytics</a>
+              <a href="/editor/articles/<%= article._id %>/stats" class="btn btn--secondary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l3-3 3 3 4-5"/></svg>Analytics</a>
             <% } %>
-            <form action="/editor/articles/<%= article._id %>?_method=DELETE" method="POST" style="display:inline;">
-              <button type="submit" class="btn btn--secondary" style="color: var(--color-danger);">Delete</button>
+            <form action="/editor/articles/<%= article._id %>?_method=DELETE" method="POST" class="inline-form">
+              <button type="submit" class="btn btn--danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Delete</button>
             </form>
           </div>
         </li>
