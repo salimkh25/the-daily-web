@@ -82,6 +82,7 @@ async function seed() {
       title: scraped.title,
       summary: scraped.summary,
       body: scraped.content,    // the model uses `body`, scraper saves as `content`
+      image: scraped.image,     // real BBC/Unsplash image url from scraper
       category: scraped.category,
       author,
       status,
@@ -96,6 +97,7 @@ async function seed() {
         title: scraped.title,
         summary: scraped.summary,
         body: scraped.content,
+        image: scraped.image,
         category: scraped.category,
       };
 
