@@ -1,0 +1,10 @@
+<%- include('partials/header', { title: (status || 'Error') + ' — The Daily Web' }) %>
+
+<section class="error-page">
+  <span class="section-flag">Error</span>
+  <h1 class="error-page__code"><%= status %></h1>
+  <p class="error-page__message"><%= message %></p>
+  <a class="btn btn--primary" href="/">Back to the front page</a>
+</section>
+
+<%- include('partials/footer') %>

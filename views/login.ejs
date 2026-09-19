@@ -1,0 +1,27 @@
+<%- include('partials/header', { title: 'Staff login — The Daily Web' }) %>
+
+<!-- [TODO — GUIDE step 4] Staff login form for reporters and editors.
+     POST to /auth/login. Show `error` (passed from authController) if login failed.
+     Never say whether the username or the password was wrong — just "Invalid credentials". -->
+<section class="auth">
+  <span class="section-flag">Staff</span>
+  <h1 class="auth__title">Log in</h1>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <p class="form-message form-message--error"><%= error %></p>
+  <% } %>
+
+  <form class="auth__form" action="/auth/login" method="POST">
+    <label class="field">
+      <span class="field__label">Username</span>
+      <input class="field__input" type="text" name="username" required autofocus />
+    </label>
+    <label class="field">
+      <span class="field__label">Password</span>
+      <input class="field__input" type="password" name="password" required />
+    </label>
+    <button class="btn btn--primary" type="submit">Log in</button>
+  </form>
+</section>
+
+<%- include('partials/footer') %>

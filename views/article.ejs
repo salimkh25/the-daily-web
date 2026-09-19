@@ -1,0 +1,35 @@
+<%- include('partials/header') %>
+
+<!-- [SKELETON] Design is here; wire real data via articleController.renderArticle (GUIDE step 8).
+     REQUIREMENT: the full article body must be in this server-rendered HTML (SEO) — it must NOT
+     depend on JavaScript. Only the comments and sidebar hydrate via Ajax. -->
+
+<div class="article-layout">
+  <article class="article">
+    <span class="section-flag"><%= article.category %></span>
+    <h1 class="article__title"><%= article.title %></h1>
+    <p class="article__byline">By <%= article.author && article.author.displayName ? article.author.displayName : 'Staff' %> · <time datetime="<%= new Date(article.publishedAt).toISOString() %>"><%= new Date(article.publishedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) %></time></p>
+
+    <% if (article.image) { %>
+      <img class="article__image" src="<%= article.image %>" alt="<%= article.title %>" />
+    <% } else { %>
+      <div class="article__image card__media--placeholder"></div>
+    <% } %>
+
+    <!-- Full body, server-rendered. TODO: render real body (consider allowing simple paragraphs). -->
+    <div class="article__body">
+      <p><%= article.body %></p>
+    </div>
+
+    <%- include('partials/comments') %>
+  </article>
+
+  <aside class="article-layout__side">
+    <%- include('partials/weather') %>
+  </aside>
+</div>
+
+<!-- Client-side Ajax for posting comments (the worked example). -->
+<script src="/js/comments.js" defer></script>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,88 @@
+<%- include('partials/header') %>
+
+<!-- [SKELETON] The layout + design are here; the DATA is your job.
+     Build: articleController.renderHome + GET /api/articles, then feed real published
+     articles into `hero` and `articles`, and add search / filter / sort / infinite scroll
+     (public/js/feed.js). GUIDE steps 5-7. -->
+
+<% if (!articles || !articles.length) { %>
+  <div class="scaffold-note">
+    <strong>Scaffold is live.</strong> This is the styled home shell with placeholder stories.
+    Open <code>GUIDE.md</code> and start at step 1. Replace this placeholder in <code>home.ejs</code>
+    once <code>renderHome</code> returns real articles.
+  </div>
+<% } %>
+
+<div class="home">
+  <div class="home__main">
+    <!-- HERO: lead story + two secondary. -->
+    <section class="hero">
+      <article class="hero__lead card">
+        <div class="card__media card__media--placeholder"></div>
+        <div class="card__body">
+          <span class="section-flag">Lead</span>
+          <h1 class="hero__title"><a href="/article/lead">Your lead story headline sits here, large and bold</a></h1>
+          <p class="hero__summary">A one or two line summary of the lead story. Merriweather body type keeps long reading comfortable while Libre Franklin drives the headlines.</p>
+          <p class="meta">By Staff Reporter · <%= new Date().toLocaleDateString('en-GB') %></p>
+        </div>
+      </article>
+      <div class="hero__side">
+        <article class="card card--row">
+          <div class="card__body">
+            <span class="section-flag">World</span>
+            <h3 class="card__title"><a href="/article/2">Secondary story headline goes here</a></h3>
+            <p class="meta">By A. Reporter</p>
+          </div>
+        </article>
+        <article class="card card--row">
+          <div class="card__body">
+            <span class="section-flag">Tech</span>
+            <h3 class="card__title"><a href="/article/3">Another secondary story headline</a></h3>
+            <p class="meta">By A. Reporter</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- TOOLS: search / filter / sort. TODO: wire to /api/articles via public/js/feed.js. -->
+    <div class="feed-tools">
+      <input class="field__input" id="feed-search" type="search" placeholder="Search articles…" aria-label="Search articles" />
+      <select class="field__input" id="feed-sort" aria-label="Sort by">
+        <option value="date">Newest</option>
+        <option value="popular">Most popular</option>
+      </select>
+    </div>
+
+    <!-- FEED: card grid (Flexbox flex-wrap). -->
+    <h2 class="section-flag-heading"><span class="section-flag">Latest</span></h2>
+    <div class="feed" id="feed">
+      <% for (var i = 0; i < 6; i++) { %>
+        <article class="card">
+          <div class="card__media card__media--placeholder"></div>
+          <div class="card__body">
+            <span class="section-flag">Category</span>
+            <h3 class="card__title"><a href="/article/<%= i %>">Placeholder headline number <%= i + 1 %></a></h3>
+            <p class="card__summary">Short summary preview of the article, trimmed to two lines in the card layout.</p>
+            <p class="meta">By Reporter · <%= new Date().toLocaleDateString('en-GB') %></p>
+          </div>
+        </article>
+      <% } %>
+    </div>
+    <div class="feed-sentinel" id="feed-sentinel" hidden>Loading more…</div>
+  </div>
+
+  <!-- SIDEBAR: weather + most read. -->
+  <aside class="home__side">
+    <%- include('partials/weather') %>
+    <section class="panel">
+      <div class="panel__head"><span class="section-flag">Most read</span></div>
+      <ol class="ranklist">
+        <li><a href="#">Most-read placeholder headline one</a></li>
+        <li><a href="#">Most-read placeholder headline two</a></li>
+        <li><a href="#">Most-read placeholder headline three</a></li>
+      </ol>
+    </section>
+  </aside>
+</div>
+
+<%- include('partials/footer') %>

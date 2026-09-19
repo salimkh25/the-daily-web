@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= typeof title !== 'undefined' ? title : 'The Daily Web' %></title>
+  <meta name="description" content="<%= typeof metaDescription !== 'undefined' ? metaDescription : 'The Daily Web — breaking news, published fast.' %>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;700;800;900&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <!-- Masthead — the signature red rule lives under it (see style.css .masthead). -->
+  <header class="masthead">
+    <div class="container masthead__inner">
+      <a class="wordmark" href="/">The&nbsp;Daily&nbsp;<span class="wordmark__accent">Web</span></a>
+      <div class="masthead__utility">
+        <span class="masthead__date"><%= new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) %></span>
+        <% if (currentUser) { %>
+          <a class="btn btn--ghost" href="/<%= currentUser.role %>"><%= currentUser.role === 'editor' ? 'Editor area' : 'My articles' %></a>
+          <form action="/auth/logout" method="POST" class="inline-form">
+            <button type="submit" class="btn btn--ghost">Log out</button>
+          </form>
+        <% } else { %>
+          <a class="btn btn--ghost" href="/auth/login">Staff login</a>
+        <% } %>
+      </div>
+    </div>
+    <!-- The thick red rule: the signature element. -->
+    <div class="masthead__rule"></div>
+    <!-- Category nav (BBC-style). TODO: render real categories from the DB. -->
+    <nav class="catnav" aria-label="Sections">
+      <div class="container catnav__inner">
+        <a class="catnav__link is-active" href="/">Home</a>
+        <a class="catnav__link" href="/?category=World">World</a>
+        <a class="catnav__link" href="/?category=Technology">Technology</a>
+        <a class="catnav__link" href="/?category=Business">Business</a>
+        <a class="catnav__link" href="/?category=Sport">Sport</a>
+        <a class="catnav__link" href="/?category=Culture">Culture</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container page">

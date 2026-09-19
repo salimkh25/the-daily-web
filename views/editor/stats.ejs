@@ -1,0 +1,13 @@
+<%- include('../partials/header', { title: 'Impact Analytics — The Daily Web' }) %>
+
+<!-- [TODO — GUIDE step 11] Impact Analytics.
+     Draw a chart of views over time for the selected article, with clear markers at each point
+     an editor published an update, so you can read how views changed before vs after an update.
+     Use Chart.js OR a <canvas> you draw yourself. Fetch the data from /api/articles/:id/stats. -->
+<section class="analytics">
+  <h1><span class="section-flag">Impact Analytics</span></h1>
+  <canvas id="stats-chart" width="800" height="360" aria-label="Views over time"></canvas>
+  <p class="muted">TODO: fetch /api/articles/:id/stats and render the chart (public/js — e.g. editor.js).</p>
+</section>
+
+<%- include('../partials/footer') %>

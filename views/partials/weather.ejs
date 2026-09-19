@@ -1,0 +1,11 @@
+<!-- views/partials/weather.ejs — [TODO — GUIDE step 12]  weather widget (sidebar)
+     Show current weather from a free service (e.g. OpenWeatherMap). Data may be up to 15 min old,
+     so cache the API response on the SERVER (don't call the API on every request) and let this
+     widget fetch it from your own /api/weather endpoint via public/js/weather.js.
+     Keep the API key on the server only — never expose it to the browser. -->
+<aside class="panel weather" id="weather" aria-label="Local weather">
+  <div class="panel__head"><span class="section-flag">Weather</span></div>
+  <div class="weather__body" id="weather-body">
+    <p class="muted">Weather widget goes here.</p>
+  </div>
+</aside>
