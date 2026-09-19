@@ -25,28 +25,43 @@
 // Also required elsewhere: search on at least one central field (e.g. title) — add a text
 // index here, e.g.  articleSchema.index({ title: 'text', summary: 'text' });
 //
-// Suggested starting skeleton (uncomment and complete):
-//
-// const mongoose = require('mongoose');
-//
-// const ARTICLE_STATES = ['draft', 'pending', 'published', 'returned'];
-//
-// const articleSchema = new mongoose.Schema({
-//   title:      { type: String, required: true, trim: true, maxlength: 160 },
-//   summary:    { type: String, trim: true, maxlength: 400 },
-//   body:       { type: String, required: true },
-//   image:      { type: String, trim: true }, // URL or /uploads path
-//   category:   { type: String, required: true, index: true },
-//   author:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-//   status:     { type: String, enum: ARTICLE_STATES, default: 'draft', index: true },
-//   editorNote: { type: String, trim: true, default: '' },
-//   publishedAt:{ type: Date },
-//   // ...your fields for the published-vs-pending-edit rule and popularity...
-// }, { timestamps: true });
-//
-// // module.exports = mongoose.model('Article', articleSchema);
-// // module.exports.STATES = ARTICLE_STATES;
+const mongoose = require('mongoose');
 
-// Until you implement the schema above, this file exports null so the app still boots.
-// Replace this line with your `mongoose.model(...)` export. (GUIDE.md step 2)
-module.exports = null;
+const ARTICLE_STATES = ['draft', 'pending', 'published', 'returned'];
+
+const publishedSchema = new mongoose.Schema({
+  title:      { type: String, trim: true, maxlength: 160 },
+  summary:    { type: String, trim: true, maxlength: 400 },
+  body:       { type: String },
+  image:      { type: String, trim: true },
+  category:   { type: String }
+}, { _id: false });
+
+const articleSchema = new mongoose.Schema({
+  // Working Draft Fields
+  title:      { type: String, required: true, trim: true, maxlength: 160 },
+  summary:    { type: String, trim: true, maxlength: 400 },
+  body:       { type: String, required: true },
+  image:      { type: String, trim: true },
+  category:   { type: String, required: true, index: true },
+  
+  // Metadata
+  author:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  status:     { type: String, enum: ARTICLE_STATES, default: 'draft', index: true },
+  editorNote: { type: String, trim: true, default: '' },
+  publishedAt:{ type: Date, index: true },
+  viewsCount: { type: Number, default: 0, index: true },
+
+  // Live Published Version (copied from draft upon approval)
+  published:  { type: publishedSchema, default: {} }
+}, { timestamps: true });
+
+// Text index for search on the *published* content
+articleSchema.index({ 
+  'published.title': 'text', 
+  'published.summary': 'text', 
+  'published.body': 'text' 
+});
+
+module.exports = mongoose.model('Article', articleSchema);
+module.exports.STATES = ARTICLE_STATES;

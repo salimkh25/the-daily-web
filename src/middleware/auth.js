@@ -35,9 +35,19 @@
 //   };
 // }
 //
-// module.exports = { requireLogin, requireRole };
+function requireLogin(req, res, next) {
+  if (req.session && req.session.user) return next();
+  if (req.originalUrl.startsWith('/api')) return res.status(401).json({ error: 'Login required' });
+  return res.redirect('/auth/login');
+}
 
-module.exports = {
-  requireLogin: (req, res, next) => next(), // TODO: replace — currently a no-op!
-  requireRole: () => (req, res, next) => next(), // TODO: replace — currently a no-op!
-};
+function requireRole(...roles) {
+  return (req, res, next) => {
+    const user = req.session && req.session.user;
+    if (!user) return res.redirect('/auth/login');
+    if (!roles.includes(user.role)) return res.status(403).render('error', { message: 'Forbidden' });
+    return next();
+  };
+}
+
+module.exports = { requireLogin, requireRole };

@@ -5,42 +5,47 @@
      articles into `hero` and `articles`, and add search / filter / sort / infinite scroll
      (public/js/feed.js). GUIDE steps 5-7. -->
 
-<% if (!articles || !articles.length) { %>
-  <div class="scaffold-note">
-    <strong>Scaffold is live.</strong> This is the styled home shell with placeholder stories.
-    Open <code>GUIDE.md</code> and start at step 1. Replace this placeholder in <code>home.ejs</code>
-    once <code>renderHome</code> returns real articles.
-  </div>
-<% } %>
+
 
 <div class="home">
   <div class="home__main">
     <!-- HERO: lead story + two secondary. -->
     <section class="hero">
-      <article class="hero__lead card">
-        <div class="card__media card__media--placeholder"></div>
-        <div class="card__body">
-          <span class="section-flag">Lead</span>
-          <h1 class="hero__title"><a href="/article/lead">Your lead story headline sits here, large and bold</a></h1>
-          <p class="hero__summary">A one or two line summary of the lead story. Merriweather body type keeps long reading comfortable while Libre Franklin drives the headlines.</p>
-          <p class="meta">By Staff Reporter · <%= new Date().toLocaleDateString('en-GB') %></p>
-        </div>
-      </article>
+      <% if (hero && hero.length > 0) { %>
+        <article class="hero__lead card">
+          <% if (hero[0].image) { %>
+            <img class="card__media" src="<%= hero[0].image %>" alt="<%= hero[0].title %>" />
+          <% } else { %>
+            <div class="card__media card__media--placeholder"></div>
+          <% } %>
+          <div class="card__body">
+            <span class="section-flag"><%= hero[0].category || 'Lead' %></span>
+            <h1 class="hero__title"><a href="/article/<%= hero[0]._id %>"><%= hero[0].title %></a></h1>
+            <p class="hero__summary"><%= hero[0].summary %></p>
+            <p class="meta">By <%= hero[0].author ? hero[0].author.displayName : 'Staff' %> · <%= new Date(hero[0].publishedAt).toLocaleDateString('en-GB') %></p>
+          </div>
+        </article>
+      <% } %>
+
       <div class="hero__side">
-        <article class="card card--row">
-          <div class="card__body">
-            <span class="section-flag">World</span>
-            <h3 class="card__title"><a href="/article/2">Secondary story headline goes here</a></h3>
-            <p class="meta">By A. Reporter</p>
-          </div>
-        </article>
-        <article class="card card--row">
-          <div class="card__body">
-            <span class="section-flag">Tech</span>
-            <h3 class="card__title"><a href="/article/3">Another secondary story headline</a></h3>
-            <p class="meta">By A. Reporter</p>
-          </div>
-        </article>
+        <% if (hero && hero.length > 1) { %>
+          <article class="card card--row">
+            <div class="card__body">
+              <span class="section-flag"><%= hero[1].category || 'World' %></span>
+              <h3 class="card__title"><a href="/article/<%= hero[1]._id %>"><%= hero[1].title %></a></h3>
+              <p class="meta">By <%= hero[1].author ? hero[1].author.displayName : 'Reporter' %></p>
+            </div>
+          </article>
+        <% } %>
+        <% if (hero && hero.length > 2) { %>
+          <article class="card card--row">
+            <div class="card__body">
+              <span class="section-flag"><%= hero[2].category || 'Tech' %></span>
+              <h3 class="card__title"><a href="/article/<%= hero[2]._id %>"><%= hero[2].title %></a></h3>
+              <p class="meta">By <%= hero[2].author ? hero[2].author.displayName : 'Reporter' %></p>
+            </div>
+          </article>
+        <% } %>
       </div>
     </section>
 
@@ -56,19 +61,27 @@
     <!-- FEED: card grid (Flexbox flex-wrap). -->
     <h2 class="section-flag-heading"><span class="section-flag">Latest</span></h2>
     <div class="feed" id="feed">
-      <% for (var i = 0; i < 6; i++) { %>
-        <article class="card">
-          <div class="card__media card__media--placeholder"></div>
-          <div class="card__body">
-            <span class="section-flag">Category</span>
-            <h3 class="card__title"><a href="/article/<%= i %>">Placeholder headline number <%= i + 1 %></a></h3>
-            <p class="card__summary">Short summary preview of the article, trimmed to two lines in the card layout.</p>
-            <p class="meta">By Reporter · <%= new Date().toLocaleDateString('en-GB') %></p>
-          </div>
-        </article>
+      <% if (articles && articles.length > 0) { %>
+        <% articles.forEach(function(article) { %>
+          <article class="card">
+            <% if (article.image) { %>
+              <img class="card__media" src="<%= article.image %>" alt="<%= article.title %>" />
+            <% } else { %>
+              <div class="card__media card__media--placeholder"></div>
+            <% } %>
+            <div class="card__body">
+              <span class="section-flag"><%= article.category %></span>
+              <h3 class="card__title"><a href="/article/<%= article._id %>"><%= article.title %></a></h3>
+              <p class="card__summary"><%= article.summary %></p>
+              <p class="meta">By <%= article.author ? article.author.displayName : 'Reporter' %> · <%= new Date(article.publishedAt).toLocaleDateString('en-GB') %></p>
+            </div>
+          </article>
+        <% }); %>
+      <% } else { %>
+        <p>No articles found.</p>
       <% } %>
     </div>
-    <div class="feed-sentinel" id="feed-sentinel" hidden>Loading more…</div>
+    <div class="feed-sentinel" id="feed-sentinel">Loading more…</div>
   </div>
 
   <!-- SIDEBAR: weather + most read. -->
@@ -85,4 +98,5 @@
   </aside>
 </div>
 
+<script src="/js/feed.js" defer></script>
 <%- include('partials/footer') %>
