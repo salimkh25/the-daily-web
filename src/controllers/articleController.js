@@ -32,6 +32,7 @@ const mongoose = require('mongoose');
 const Article = require('../models/Article');
 const View = require('../models/View');
 const Comment = require('../models/Comment');
+const logger = require('../utils/logger');
 
 // The public always sees the last APPROVED version, which lives in `published`.
 // This maps that onto the fields the views/JSON expect. An article "is public" once it
@@ -88,7 +89,8 @@ async function renderArticle(req, res, next) {
 
     // Fire-and-forget view counting
     // 1. Increment overall views on Article
-    Article.updateOne({ _id: id }, { $inc: { viewsCount: 1 } }).catch(console.error);
+    Article.updateOne({ _id: id }, { $inc: { viewsCount: 1 } })
+      .catch((err) => logger.error('viewsCount increment failed:', err.message));
     // 2. Increment hourly bucket on View
     const bucket = new Date();
     bucket.setMinutes(0, 0, 0); // round to start of hour
@@ -96,7 +98,7 @@ async function renderArticle(req, res, next) {
       { article: id, bucket },
       { $inc: { count: 1 } },
       { upsert: true }
-    ).catch(console.error);
+    ).catch((err) => logger.error('view bucket increment failed:', err.message));
 
     // Show the last approved content (from `published`).
     const mappedArticle = toPublicArticle(article);
