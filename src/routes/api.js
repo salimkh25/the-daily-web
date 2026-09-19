@@ -23,6 +23,7 @@ const statsController = require('../controllers/statsController');
 router.get('/articles/:id/stats', statsController.articleStats);
 
 // ---- Weather (TODO — GUIDE step 12) ----
-// router.get('/weather', weatherController.current);
+const weatherController = require('../controllers/weatherController');
+router.get('/weather', weatherController.current);
 
 module.exports = router;
