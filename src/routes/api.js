@@ -15,8 +15,8 @@ router.get('/articles/:articleId/comments', commentController.listByArticle);
 router.post('/articles/:articleId/comments', commentLimiter, commentController.create);
 
 // ---- Articles (TODO — GUIDE steps 5-7) ----
-// const articleController = require('../controllers/articleController');
-// router.get('/articles', articleController.list); // ?page= &search= &category= &sort= &seen=
+const articleController = require('../controllers/articleController');
+router.get('/articles', articleController.list); // ?page= &search= &category= &sort= &seen=
 
 // ---- Stats (TODO — GUIDE step 11) ----
 // const statsController = require('../controllers/statsController');

@@ -16,16 +16,11 @@
 // collection of publish events, or a field on the Article. Whatever you choose, the stats
 // controller must be able to return: a time series of view counts + the list of update timestamps.
 //
-// Sketch (pick your design, then complete):
-//
-// const mongoose = require('mongoose');
-// const viewSchema = new mongoose.Schema({
-//   article: { type: mongoose.Schema.Types.ObjectId, ref: 'Article', required: true, index: true },
-//   bucket:  { type: Date, required: true },   // e.g. start of the hour (Option B)
-//   count:   { type: Number, default: 0 },
-// });
-// viewSchema.index({ article: 1, bucket: 1 }, { unique: true });
-// module.exports = mongoose.model('View', viewSchema);
-
-// Until implemented, exports null so the app still boots. (GUIDE.md step 11)
-module.exports = null;
+const mongoose = require('mongoose');
+const viewSchema = new mongoose.Schema({
+  article: { type: mongoose.Schema.Types.ObjectId, ref: 'Article', required: true, index: true },
+  bucket:  { type: Date, required: true },   // e.g. start of the hour (Option B)
+  count:   { type: Number, default: 0 },
+});
+viewSchema.index({ article: 1, bucket: 1 }, { unique: true });
+module.exports = mongoose.model('View', viewSchema);
