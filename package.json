@@ -6,7 +6,6 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
     "dev": "node --env-file-if-exists=.env --watch server.js",
-    "scrape": "node seed/scrape.js",
     "seed": "node --env-file-if-exists=.env seed/seed.js"
   },
   "keywords": [
