@@ -27,3 +27,7 @@ graphify-out/
 # Build output
 dist/
 build/
+
+# Seed utility scripts and generated data (not part of the project)
+seed/scrape.js
+seed/scraped.json

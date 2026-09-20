@@ -13,8 +13,24 @@
 <body>
   <!-- Masthead — the signature red rule lives under it (see style.css .masthead). -->
   <header class="masthead">
+    <!-- Latest brief: a slim live ticker of the newest headline (home page). -->
+    <% if (typeof latestBrief !== 'undefined' && latestBrief) { %>
+    <div class="masthead__brief">
+      <div class="container masthead__brief-inner">
+        <span class="brief-eyebrow"><span class="brief-dot" aria-hidden="true"></span>Latest</span>
+        <a class="brief-headline" href="/article/<%= latestBrief._id %>"><%= latestBrief.title %></a>
+      </div>
+    </div>
+    <% } %>
     <div class="container masthead__inner">
       <a class="wordmark" href="/">The&nbsp;Daily&nbsp;<span class="wordmark__accent">Web</span></a>
+
+      <!-- Title Bar Search -->
+      <form class="masthead__search" action="/" method="GET" role="search">
+        <svg class="masthead__search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="field__input masthead__search-input" id="feed-search" name="search" type="search" placeholder="Search news articles…" aria-label="Search articles" value="<%= (typeof currentSearch !== 'undefined' && currentSearch) ? currentSearch : '' %>" autocomplete="off" />
+      </form>
+
       <div class="masthead__utility">
         <span class="masthead__date"><%= new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) %></span>
         <% if (currentUser) { %>
@@ -29,15 +45,30 @@
     </div>
     <!-- The thick red rule: the signature element. -->
     <div class="masthead__rule"></div>
-    <!-- Category nav (BBC-style). TODO: render real categories from the DB. -->
+    <!-- Category nav (BBC-style). Real categories with dynamic active state -->
+    <% 
+      const activeCat = (typeof currentCategory !== 'undefined' && currentCategory) ? currentCategory.toLowerCase() : '';
+      const navSections = [
+        { name: 'World', slug: 'World' },
+        { name: 'Politics', slug: 'Politics' },
+        { name: 'Business', slug: 'Business' },
+        { name: 'Technology', slug: 'Technology', aliases: ['tech', 'technology'] },
+        { name: 'Sport', slug: 'Sport', aliases: ['sport', 'sports'] },
+        { name: 'Science', slug: 'Science' },
+        { name: 'Health', slug: 'Health' },
+        { name: 'Entertainment', slug: 'Entertainment', aliases: ['entertainment', 'culture'] }
+      ];
+    %>
     <nav class="catnav" aria-label="Sections">
       <div class="container catnav__inner">
-        <a class="catnav__link is-active" href="/">Home</a>
-        <a class="catnav__link" href="/?category=World">World</a>
-        <a class="catnav__link" href="/?category=Technology">Technology</a>
-        <a class="catnav__link" href="/?category=Business">Business</a>
-        <a class="catnav__link" href="/?category=Sport">Sport</a>
-        <a class="catnav__link" href="/?category=Culture">Culture</a>
+        <a class="catnav__link <%= activeCat === '' ? 'is-active' : '' %>" href="/" data-category="">Home</a>
+        <% navSections.forEach(function(sec) { 
+             const isAct = sec.aliases 
+               ? sec.aliases.includes(activeCat) 
+               : activeCat === sec.slug.toLowerCase();
+        %>
+          <a class="catnav__link <%= isAct ? 'is-active' : '' %>" href="/?category=<%= sec.slug %>" data-category="<%= sec.slug %>"><%= sec.name %></a>
+        <% }); %>
       </div>
     </nav>
   </header>

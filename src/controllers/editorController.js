@@ -4,11 +4,99 @@
 
 const Article = require('../models/Article');
 
-// pulls every article in the system, sorted by recent changes
+// pulls every article in the system, count them up and sort by what the editor wants
 async function dashboard(req, res, next) {
   try {
-    const articles = await Article.find({}).sort({ updatedAt: -1 }).populate('author', 'displayName username');
-    res.render('editor/dashboard', { articles });
+    const currentSort = req.query.sort || 'updated';
+    const currentStatus = req.query.status || 'all';
+    const currentGenre = req.query.genre || req.query.category || 'all';
+    const currentSearch = (req.query.search || '').trim();
+
+    // 1. Gather all publication counts & metrics across the whole site
+    const [totalCount, statusAgg, viewsAgg, genreAgg] = await Promise.all([
+      Article.countDocuments(),
+      Article.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      Article.aggregate([{ $group: { _id: null, totalClicks: { $sum: '$viewsCount' } } }]),
+      Article.aggregate([{ $group: { _id: '$category', count: { $sum: 1 } } }, { $sort: { _id: 1 } }])
+    ]);
+
+    const statusCounts = {
+      published: 0,
+      pending: 0,
+      returned: 0,
+      draft: 0
+    };
+    statusAgg.forEach(item => {
+      if (item._id && statusCounts[item._id] !== undefined) {
+        statusCounts[item._id] = item.count;
+      }
+    });
+
+    const stats = {
+      total: totalCount,
+      published: statusCounts.published,
+      pending: statusCounts.pending,
+      returned: statusCounts.returned,
+      draft: statusCounts.draft,
+      totalClicks: viewsAgg[0]?.totalClicks || 0,
+      genres: genreAgg.filter(g => g._id).map(g => ({ name: g._id, count: g.count }))
+    };
+
+    // 2. Build filter query
+    const filter = {};
+    if (currentStatus && currentStatus !== 'all') {
+      filter.status = currentStatus;
+    }
+    if (currentGenre && currentGenre !== 'all') {
+      // support aliases (Tech/Technology, Entertainment/Culture)
+      if (/^tech/i.test(currentGenre)) {
+        filter.category = { $in: [/^tech/i, /^technology/i] };
+      } else if (/^(entertainment|culture)/i.test(currentGenre)) {
+        filter.category = { $in: [/^entertainment/i, /^culture/i] };
+      } else if (/^sport/i.test(currentGenre)) {
+        filter.category = { $in: [/^sport/i, /^sports/i] };
+      } else {
+        filter.category = new RegExp('^' + currentGenre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i');
+      }
+    }
+    if (currentSearch) {
+      filter.$or = [
+        { title: new RegExp(currentSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+        { summary: new RegExp(currentSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
+      ];
+    }
+
+    // 3. Build sorting
+    let sortQuery = { updatedAt: -1 };
+    if (currentSort === 'views' || currentSort === 'clicks' || currentSort === 'popular') {
+      sortQuery = { viewsCount: -1, updatedAt: -1 };
+    } else if (currentSort === 'genre' || currentSort === 'category') {
+      sortQuery = { category: 1, updatedAt: -1 };
+    } else if (currentSort === 'status') {
+      sortQuery = { status: 1, updatedAt: -1 };
+    } else if (currentSort === 'oldest') {
+      sortQuery = { updatedAt: 1 };
+    }
+
+    const articles = await Article.find(filter)
+      .sort(sortQuery)
+      .populate('author', 'displayName username')
+      .lean();
+
+    // If status sort was picked, order in editor workflow priority: pending -> returned -> draft -> published
+    if (currentSort === 'status') {
+      const order = { pending: 1, returned: 2, draft: 3, published: 4 };
+      articles.sort((a, b) => (order[a.status] || 99) - (order[b.status] || 99));
+    }
+
+    res.render('editor/dashboard', {
+      articles,
+      stats,
+      currentSort,
+      currentStatus,
+      currentGenre,
+      currentSearch
+    });
   } catch (err) {
     next(err);
   }
@@ -36,6 +124,22 @@ async function update(req, res, next) {
     for (const field of editable) {
       if (req.body[field] !== undefined) article[field] = req.body[field];
     }
+
+    // if the article is already live, an editor's edit goes straight to readers -
+    // the editor is the authority, so no re-approval needed for their own change.
+    // (drafts / pending / returned just save the content, status unchanged)
+    if (article.status === 'published') {
+      article.published = {
+        title: article.title,
+        summary: article.summary,
+        body: article.body,
+        category: article.category,
+        image: article.image
+      };
+      article.updates = article.updates || [];
+      article.updates.push(new Date()); // mark it on the analytics graph
+    }
+
     await article.save();
     res.redirect(`/editor/articles/${article._id}`);
   } catch (err) {

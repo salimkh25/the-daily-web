@@ -26,11 +26,20 @@
     <% if (!comments.length) { %>
       <li class="comment-empty" id="comment-empty">Be the first to comment.</li>
     <% } %>
-    <% comments.forEach(function (c) { %>
-      <li class="comment">
+    <% comments.forEach(function (c) {
+         const mine = (typeof myComments !== 'undefined') && myComments.map(String).includes(String(c._id));
+         const isEditor = currentUser && currentUser.role === 'editor';
+    %>
+      <li class="comment" data-comment-id="<%= c._id %>">
         <div class="comment__meta">
           <span class="comment__author"><%= c.author %></span>
           <time class="comment__time" datetime="<%= new Date(c.createdAt).toISOString() %>"><%= new Date(c.createdAt).toLocaleString('en-GB') %></time>
+          <% if (mine || isEditor) { %>
+            <span class="comment__actions">
+              <% if (mine) { %><button type="button" class="comment__action" data-edit>Edit</button><% } %>
+              <button type="button" class="comment__action comment__action--del" data-delete>Delete</button>
+            </span>
+          <% } %>
         </div>
         <p class="comment__body"><%= c.body %></p>
       </li>

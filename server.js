@@ -48,9 +48,11 @@ app.use(
   })
 );
 
-// --- Make the logged-in user available to every EJS view as `currentUser` ---
+// --- Make the logged-in user, active category and search available to every EJS view ---
 app.use((req, res, next) => {
   res.locals.currentUser = req.session.user || null;
+  res.locals.currentCategory = req.query.category || '';
+  res.locals.currentSearch = req.query.search || '';
   next();
 });
 

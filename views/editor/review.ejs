@@ -1,71 +1,96 @@
-<%- include('../partials/header', { title: 'Review article — The Daily Web' }) %>
+<%- include('../partials/header', { title: 'Edit article — The Daily Web' }) %>
+
+<%
+  // only a genuine pending edit to an already-live article needs the side-by-side compare
+  const showCompare = article.status === 'pending' && article.published && article.published.title;
+%>
 
 <section class="editor-pane">
   <div class="workspace__head">
-    <h1><span class="section-flag">Editor</span> Review article</h1>
+    <div>
+      <h1><span class="section-flag">Editor</span> <%= article.status === 'pending' ? 'Review' : 'Edit' %> article</h1>
+      <p class="meta">By <%= article.author ? article.author.displayName : 'Unknown' %> · Last updated: <%= new Date(article.updatedAt).toLocaleDateString('en-GB') %></p>
+    </div>
     <span class="chip chip--<%= article.status %>"><%= article.status %></span>
   </div>
 
-  <p class="meta">By <%= article.author ? article.author.displayName : 'Unknown' %> · Last updated: <%= new Date(article.updatedAt).toLocaleDateString('en-GB') %></p>
-
-  <div class="review-grid">
-    <% if (article.published && article.published.title) { %>
-      <!-- Compare mode -->
+  <% if (showCompare) { %>
+    <!-- readers currently see the live version; the editor is deciding on the proposed change -->
+    <div class="review-grid">
       <div class="review-column">
-        <h2>Currently Published</h2>
-        <div class="card">
-          <div class="card__body">
-            <span class="section-flag"><%= article.published.category %></span>
-            <h3 class="card__title"><%= article.published.title %></h3>
-            <p class="card__summary"><strong>Summary:</strong> <%= article.published.summary %></p>
-            <hr>
-            <div style="white-space: pre-wrap;"><%= article.published.body %></div>
-          </div>
-        </div>
+        <h2>Live version (readers see this)</h2>
+        <div class="card"><div class="card__body">
+          <span class="section-flag"><%= article.published.category %></span>
+          <h3 class="card__title"><%= article.published.title %></h3>
+          <p class="card__summary"><%= article.published.summary %></p>
+          <hr>
+          <div style="white-space: pre-wrap;"><%= article.published.body %></div>
+        </div></div>
       </div>
-    <% } %>
-
-    <div class="review-column">
-      <h2>Pending Draft</h2>
-      <div class="card" style="border: 1px solid var(--color-primary);">
-        <div class="card__body">
+      <div class="review-column">
+        <h2>Proposed changes</h2>
+        <div class="card"><div class="card__body">
           <span class="section-flag"><%= article.category %></span>
           <h3 class="card__title"><%= article.title %></h3>
-          <p class="card__summary"><strong>Summary:</strong> <%= article.summary %></p>
+          <p class="card__summary"><%= article.summary %></p>
           <hr>
           <div style="white-space: pre-wrap;"><%= article.body %></div>
-        </div>
+        </div></div>
       </div>
     </div>
-  </div>
-
-  <% if (article.status === 'pending') { %>
-    <div class="review-actions" style="margin-top: 2rem; padding: 1rem; background: var(--color-surface); border-radius: 4px;">
-      
-      <!-- Approve -->
-      <form action="/editor/articles/<%= article._id %>/approve" method="POST" style="display:inline-block; margin-right: 1rem;">
-        <button type="submit" class="btn btn--primary">Approve & Publish</button>
-      </form>
-
-      <!-- Return -->
-      <form action="/editor/articles/<%= article._id %>/return" method="POST" style="display:inline-block;">
-        <input type="text" name="editorNote" placeholder="Reason for returning..." required class="field__input" style="display:inline-block; width: 300px; margin-right: 0.5rem;">
-        <button type="submit" class="btn btn--secondary">Return for Fixes</button>
-      </form>
-    </div>
   <% } %>
-</section>
 
-<style>
-  .review-grid {
-    display: flex;
-    gap: 2rem;
-    margin-top: 2rem;
-  }
-  .review-column {
-    flex: 1;
-    min-width: 0; /* prevents flex blowout */
-  }
-</style>
+  <!-- Editors can edit ANY article's content (spec: the editor can view and edit every article).
+       Editing a live article publishes the change straight away; drafts/pending just save. -->
+  <form class="editor-edit" method="POST" action="/editor/articles/<%= article._id %>?_method=PUT">
+    <h2 class="section-flag-heading"><span class="section-flag">Edit</span> <%= showCompare ? 'the proposed draft' : 'article content' %></h2>
+
+    <label class="field">
+      <span class="field__label">Title</span>
+      <input class="field__input" type="text" name="title" value="<%= article.title || '' %>" required />
+    </label>
+
+    <label class="field">
+      <span class="field__label">Category</span>
+      <input class="field__input" type="text" name="category" value="<%= article.category || '' %>" required />
+    </label>
+
+    <label class="field">
+      <span class="field__label">Image URL</span>
+      <input class="field__input" type="url" name="image" value="<%= article.image || '' %>" />
+    </label>
+
+    <label class="field">
+      <span class="field__label">Summary</span>
+      <textarea class="field__input" name="summary" rows="2" required><%= article.summary || '' %></textarea>
+    </label>
+
+    <label class="field">
+      <span class="field__label">Body</span>
+      <textarea class="field__input" name="body" rows="12" required><%= article.body || '' %></textarea>
+    </label>
+
+    <button type="submit" class="btn btn--secondary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      <%= article.status === 'published' ? 'Save & publish changes' : 'Save changes' %>
+    </button>
+  </form>
+
+  <!-- Status actions -->
+  <div class="review-actions">
+    <% if (article.status === 'pending') { %>
+      <form action="/editor/articles/<%= article._id %>/approve" method="POST" class="inline-form">
+        <button type="submit" class="btn btn--primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Approve &amp; Publish</button>
+      </form>
+      <form action="/editor/articles/<%= article._id %>/return" method="POST" class="inline-form" style="display:flex; gap:8px; flex:1 1 320px;">
+        <input type="text" name="editorNote" placeholder="Reason for returning..." required class="field__input">
+        <button type="submit" class="btn btn--secondary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>Return for Fixes</button>
+      </form>
+    <% } %>
+    <form action="/editor/articles/<%= article._id %>?_method=DELETE" method="POST" class="inline-form">
+      <button type="submit" class="btn btn--danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Delete</button>
+    </form>
+  </div>
+</section>
 
 <%- include('../partials/footer') %>

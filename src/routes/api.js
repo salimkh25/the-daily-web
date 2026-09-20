@@ -10,6 +10,8 @@ const createRateLimiter = require('../middleware/rateLimit');
 const commentLimiter = createRateLimiter({ windowMs: 60_000, max: 3 });
 router.get('/articles/:articleId/comments', commentController.listByArticle);
 router.post('/articles/:articleId/comments', commentLimiter, commentController.create);
+router.put('/comments/:id', commentController.update);    // commenter edits their own
+router.delete('/comments/:id', commentController.remove); // commenter deletes own / editor deletes any
 
 // article list endpoint - used by the feed for infinite scroll, search, filter etc
 const articleController = require('../controllers/articleController');
