@@ -88,6 +88,19 @@ async function renderHome(req, res, next) {
       .lean();
     const articles = raw.map(toPublicArticle); // show the last approved content
 
+    // "Most read" sidebar: the top published articles by view count
+    const mostReadRaw = await Article.find({ publishedAt: { $ne: null } })
+      .sort({ viewsCount: -1 })
+      .limit(5)
+      .lean();
+    const mostRead = mostReadRaw.map(toPublicArticle);
+
+    // newest published headline for the "Latest" brief strip in the top bar
+    const latestRaw = await Article.findOne({ publishedAt: { $ne: null } })
+      .sort({ publishedAt: -1 })
+      .lean();
+    const latestBrief = latestRaw ? toPublicArticle(latestRaw) : null;
+
     // when on home show 3 hero items then the rest in feed
     // if viewing a category or searching, dont do hero so all matching stories start right at the top
     const hero = (!category && !search && articles.length >= 3) ? articles.slice(0, 3) : null;
@@ -113,7 +126,9 @@ async function renderHome(req, res, next) {
       currentCategory: displayCat || category,
       currentSearch: search,
       hero,
-      articles: feed
+      articles: feed,
+      mostRead,
+      latestBrief
     });
   } catch (err) {
     next(err);
@@ -168,7 +183,8 @@ async function renderArticle(req, res, next) {
     res.render('article', {
       title: `${mappedArticle.title} — The Daily Web`,
       article: mappedArticle,
-      comments
+      comments,
+      myComments: (req.session && req.session.myComments) || [] // which comments this guest can edit/delete
     });
   } catch (err) {
     next(err);

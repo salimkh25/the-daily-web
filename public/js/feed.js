@@ -6,12 +6,14 @@ let currentPage = 1;
 let currentSearch = urlParams.get('search') || '';
 let currentSort = urlParams.get('sort') || 'date';
 let currentCategory = urlParams.get('category') || '';
+let currentSeen = urlParams.get('seen') || '';
 let isLoading = false;
 
 const feedContainer = document.getElementById('feed');
 const sentinel = document.getElementById('feed-sentinel');
 const searchInput = document.getElementById('feed-search');
 const sortSelect = document.getElementById('feed-sort');
+const seenSelect = document.getElementById('feed-seen');
 const heroSection = document.querySelector('.hero');
 const headingFlag = document.querySelector('.section-flag-heading .section-flag');
 const searchForm = document.querySelector('.masthead__search');
@@ -82,6 +84,7 @@ async function fetchFeed(append = false) {
     });
     if (currentSearch) params.set('search', currentSearch);
     if (currentCategory) params.set('category', currentCategory);
+    if (currentSeen) params.set('seen', currentSeen);
 
     const res = await fetch(`/api/articles?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch articles');
@@ -271,6 +274,15 @@ if (searchInput) {
 if (sortSelect) {
   sortSelect.addEventListener('change', (e) => {
     currentSort = e.target.value;
+    currentPage = 1;
+    fetchFeed(false);
+  });
+}
+
+// read-status filter (all / unread / read) - uses the articles you've opened this session
+if (seenSelect) {
+  seenSelect.addEventListener('change', (e) => {
+    currentSeen = e.target.value;
     currentPage = 1;
     fetchFeed(false);
   });

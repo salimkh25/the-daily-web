@@ -13,6 +13,15 @@
 <body>
   <!-- Masthead — the signature red rule lives under it (see style.css .masthead). -->
   <header class="masthead">
+    <!-- Latest brief: a slim live ticker of the newest headline (home page). -->
+    <% if (typeof latestBrief !== 'undefined' && latestBrief) { %>
+    <div class="masthead__brief">
+      <div class="container masthead__brief-inner">
+        <span class="brief-eyebrow"><span class="brief-dot" aria-hidden="true"></span>Latest</span>
+        <a class="brief-headline" href="/article/<%= latestBrief._id %>"><%= latestBrief.title %></a>
+      </div>
+    </div>
+    <% } %>
     <div class="container masthead__inner">
       <a class="wordmark" href="/">The&nbsp;Daily&nbsp;<span class="wordmark__accent">Web</span></a>
 

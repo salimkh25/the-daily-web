@@ -43,6 +43,11 @@ async function create(req, res, next) {
     }
 
     const comment = await Comment.create({ article: articleId, author, body });
+
+    // remember this comment in the guest's session so they can edit/delete it later
+    req.session.myComments = req.session.myComments || [];
+    req.session.myComments.push(comment._id.toString());
+
     res.status(201).json(comment); // client appends this without reloading the list
   } catch (err) {
     // Turn Mongoose validation errors into a clean 400.
@@ -53,4 +58,51 @@ async function create(req, res, next) {
   }
 }
 
-module.exports = { listByArticle, create };
+// did the current guest session post this comment? (that's how we know it's "theirs")
+function ownsComment(req, id) {
+  return Array.isArray(req.session.myComments) && req.session.myComments.map(String).includes(String(id));
+}
+
+// PUT /api/comments/:id  -> the commenter edits their OWN comment
+async function update(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: 'Invalid comment id' });
+    if (!ownsComment(req, id)) return res.status(403).json({ error: 'You can only edit your own comment.' });
+
+    const body = (req.body.body || '').trim();
+    if (!body) return res.status(400).json({ error: 'Comment cannot be empty.' });
+
+    const comment = await Comment.findByIdAndUpdate(id, { body }, { new: true, runValidators: true });
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+    res.json(comment);
+  } catch (err) {
+    if (err.name === 'ValidationError') return res.status(400).json({ error: Object.values(err.errors)[0].message });
+    next(err);
+  }
+}
+
+// DELETE /api/comments/:id  -> the commenter deletes their own, OR an editor deletes any
+async function remove(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: 'Invalid comment id' });
+
+    const isEditor = req.session.user && req.session.user.role === 'editor';
+    if (!ownsComment(req, id) && !isEditor) {
+      return res.status(403).json({ error: 'You are not allowed to delete this comment.' });
+    }
+
+    const comment = await Comment.findByIdAndDelete(id);
+    if (!comment) return res.status(404).json({ error: 'Comment not found' });
+
+    if (Array.isArray(req.session.myComments)) {
+      req.session.myComments = req.session.myComments.filter((c) => String(c) !== String(id));
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listByArticle, create, update, remove };

@@ -124,6 +124,22 @@ async function update(req, res, next) {
     for (const field of editable) {
       if (req.body[field] !== undefined) article[field] = req.body[field];
     }
+
+    // if the article is already live, an editor's edit goes straight to readers -
+    // the editor is the authority, so no re-approval needed for their own change.
+    // (drafts / pending / returned just save the content, status unchanged)
+    if (article.status === 'published') {
+      article.published = {
+        title: article.title,
+        summary: article.summary,
+        body: article.body,
+        category: article.category,
+        image: article.image
+      };
+      article.updates = article.updates || [];
+      article.updates.push(new Date()); // mark it on the analytics graph
+    }
+
     await article.save();
     res.redirect(`/editor/articles/${article._id}`);
   } catch (err) {

@@ -29,6 +29,11 @@
       <% if (hero.length > 1) { %>
       <div class="hero__side">
         <article class="card card--row">
+          <% if (hero[1].image) { %>
+            <img class="card__media" src="<%= hero[1].image %>" alt="<%= hero[1].title %>" />
+          <% } else { %>
+            <div class="card__media card__media--placeholder"></div>
+          <% } %>
           <div class="card__body">
             <span class="section-flag"><%= hero[1].category || 'News' %></span>
             <h3 class="card__title"><a href="/article/<%= hero[1]._id %>"><%= hero[1].title %></a></h3>
@@ -37,6 +42,11 @@
         </article>
         <% if (hero.length > 2) { %>
         <article class="card card--row">
+          <% if (hero[2].image) { %>
+            <img class="card__media" src="<%= hero[2].image %>" alt="<%= hero[2].title %>" />
+          <% } else { %>
+            <div class="card__media card__media--placeholder"></div>
+          <% } %>
           <div class="card__body">
             <span class="section-flag"><%= hero[2].category || 'News' %></span>
             <h3 class="card__title"><a href="/article/<%= hero[2]._id %>"><%= hero[2].title %></a></h3>
@@ -49,8 +59,13 @@
     </section>
     <% } %>
 
-    <!-- TOOLS: sort feed. -->
+    <!-- TOOLS: filter by read status + sort. -->
     <div class="feed-tools">
+      <select class="field__input" id="feed-seen" aria-label="Filter by read status">
+        <option value="">All stories</option>
+        <option value="unseen">Unread</option>
+        <option value="seen">Read</option>
+      </select>
       <select class="field__input" id="feed-sort" aria-label="Sort by">
         <option value="date">Newest</option>
         <option value="popular">Most popular</option>
@@ -88,11 +103,15 @@
     <%- include('partials/weather') %>
     <section class="panel">
       <div class="panel__head"><span class="section-flag">Most read</span></div>
-      <ol class="ranklist">
-        <li><a href="#">Most-read placeholder headline one</a></li>
-        <li><a href="#">Most-read placeholder headline two</a></li>
-        <li><a href="#">Most-read placeholder headline three</a></li>
-      </ol>
+      <% if (typeof mostRead !== 'undefined' && mostRead && mostRead.length) { %>
+        <ol class="ranklist">
+          <% mostRead.forEach(function(a) { %>
+            <li><a href="/article/<%= a._id %>"><%= a.title %></a></li>
+          <% }); %>
+        </ol>
+      <% } else { %>
+        <p class="muted">No articles yet.</p>
+      <% } %>
     </section>
   </aside>
 </div>
