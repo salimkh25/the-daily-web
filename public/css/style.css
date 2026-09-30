@@ -257,6 +257,9 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); color: var(--ink); li
 .ranklist a { color: var(--ink); }
 .ranklist a:hover { color: var(--red); }
 .weather__body { font-family: var(--font-display); }
+.weather__row { display: flex; align-items: center; gap: 1rem; }
+.weather__temp { display: block; font-size: 1.5rem; line-height: 1; }
+.weather__desc { text-transform: capitalize; }
 
 /* ---- 8. Article page ---- */
 .article-layout { display: flex; flex-direction: column; gap: 32px; }
