@@ -297,8 +297,8 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); color: var(--ink); li
 .chip--returned { background: var(--red-wash); color: var(--red-deep); }
 
 /* ---- 11. Misc sections (auth / workspace / analytics / error) ---- */
-.scaffold-note { background: var(--red-wash); border: 1px solid #fecaca; border-radius: var(--radius); padding: 12px 16px; margin-bottom: 24px; font-family: var(--font-display); font-size: .92rem; }
-.scaffold-note code { background: #fff; border: 1px solid var(--line); border-radius: 3px; padding: 0 .3em; }
+.notice { background: #f1f5f9; border: 1px solid var(--line); border-radius: var(--radius-lg, 14px); padding: 12px 16px; margin: 0 0 18px; font-size: .92rem; }
+.notice--error { background: var(--red-wash); border-color: #fecaca; color: var(--red-deep); }
 
 .auth { max-width: 420px; margin: 3rem auto; }
 .auth__title { font-size: 2rem; }
@@ -424,8 +424,9 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); color: var(--ink); li
 }
 .editor-pane .field__input:focus-visible { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-wash); outline: none; }
 .editor-pane textarea.field__input { line-height: 1.6; }
+#autosave-indicator.is-error { color: var(--red-deep); border-color: #fecaca; background: var(--red-wash); }
 #autosave-indicator {
-  display: inline-block; font-family: var(--font-ui); font-size: .8rem; color: var(--muted);
+  display: inline-block; margin: 0 0 1rem; font-family: var(--font-ui); font-size: .8rem; color: var(--muted);
   background: rgba(248,250,252,.8); backdrop-filter: blur(8px);
   border: 1px solid var(--line); border-radius: 999px; padding: .3em .8em;
 }

@@ -7,7 +7,7 @@ const reporterController = require('../controllers/reporterController');
 
 router.use(requireRole('reporter'));
 router.get('/', reporterController.dashboard);
-router.get('/new', reporterController.newArticleForm);
+router.get('/new', reporterController.newArticleForm);   // empty form, created on the first autosave
 router.post('/articles', reporterController.create);
 router.get('/articles/:id/edit', reporterController.editForm);
 router.put('/articles/:id', reporterController.update);

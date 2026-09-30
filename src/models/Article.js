@@ -1,33 +1,22 @@
-// src/models/Article.js — [TODO — you build this]
+// the article - the heart of the system.
 //
-// This is the heart of the system. Use Comment.js as your pattern.
+// workflow status, exactly one of:
+//   draft (בהכנה) -> pending (ממתינה לאישור עורך) -> published (פורסמה)
+//                                                 \-> returned (הוחזרה לתיקונים) -> pending again
 //
-// Requirements this model must support (from the spec):
-//   - Basic fields shown on the feed: title, image, summary, category, author (reporter), publishedAt
-//   - Full body content for the article page
-//   - A WORKFLOW STATUS, one of exactly these states:
-//       'draft'            (בהכנה — in preparation)
-//       'pending'          (ממתינה לאישור עורך — awaiting editor approval)
-//       'published'        (פורסמה)
-//       'returned'         (הוחזרה לתיקונים — returned for corrections)
-//   - editorNote: the note an editor leaves when returning an article for corrections
-//   - author: ObjectId ref to User (the reporter who owns it)
-//   - Popularity/views support for sorting by popularity (decide: store a counter here,
-//     and/or derive from the View model — see View.js)
+// every article keeps TWO copies of its content:
+//   - the top-level title/summary/body/image/category = the WORKING copy the reporter edits (autosaved)
+//   - `published` = the last version an editor APPROVED. this is the only thing the public ever sees.
+// so a reporter can edit a live article and send it for approval while readers keep getting the
+// approved copy. when the editor approves, the working copy is copied into `published`.
 //
-// IMPORTANT — "edit a published article" rule:
-//   When a reporter edits an already-published article, the PUBLIC keeps seeing the last
-//   approved version until an editor approves the new one. Think about how to model this.
-//   Two common approaches (pick one and be able to explain it in the defense):
-//     (a) keep `publishedContent` (live) separate from `draftContent` (pending edits), or
-//     (b) keep a small version history array and a pointer to the currently-public version.
-//
-// Also required elsewhere: search on at least one central field (e.g. title) — add a text
-// index here, e.g.  articleSchema.index({ title: 'text', summary: 'text' });
-//
+// drafts can be incomplete (autosave stores whatever was typed so far), so the content fields are not
+// `required` here - completeness is checked when the reporter submits for review (missingFields()).
 const mongoose = require('mongoose');
 
 const ARTICLE_STATES = ['draft', 'pending', 'published', 'returned'];
+const CONTENT_FIELDS = ['title', 'summary', 'body', 'image', 'category'];
+const REQUIRED_TO_SUBMIT = ['title', 'summary', 'body', 'category'];
 
 const publishedSchema = new mongoose.Schema({
   title:      { type: String, trim: true, maxlength: 160 },
@@ -38,31 +27,43 @@ const publishedSchema = new mongoose.Schema({
 }, { _id: false });
 
 const articleSchema = new mongoose.Schema({
-  // Working Draft Fields
-  title:      { type: String, required: true, trim: true, maxlength: 160 },
-  summary:    { type: String, trim: true, maxlength: 400 },
-  body:       { type: String, required: true },
-  image:      { type: String, trim: true },
-  category:   { type: String, required: true, index: true },
-  
-  // Metadata
+  // working copy
+  title:      { type: String, trim: true, maxlength: [160, 'Title is too long (max 160 characters)'], default: '' },
+  summary:    { type: String, trim: true, maxlength: [400, 'Summary is too long (max 400 characters)'], default: '' },
+  body:       { type: String, default: '' },
+  image:      { type: String, trim: true, maxlength: [500, 'Image URL is too long'], default: '' },
+  category:   { type: String, trim: true, maxlength: [40, 'Category is too long'], default: '', index: true },
+
+  // metadata
   author:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   status:     { type: String, enum: ARTICLE_STATES, default: 'draft', index: true },
   editorNote: { type: String, trim: true, default: '' },
-  publishedAt:{ type: Date, index: true },
+  publishedAt:{ type: Date, index: true },           // first publication - stays the same on later updates
   viewsCount: { type: Number, default: 0, index: true },
-  updates:    [{ type: Date }], // timestamps of each editor publish/update — Impact Analytics markers
+  updates:    [{ type: Date }],                      // when an editor published an UPDATE - analytics markers
 
-  // Live Published Version (copied from draft upon approval)
+  // live version (copied from the working copy on approval)
   published:  { type: publishedSchema, default: {} }
 }, { timestamps: true });
 
-// Text index for search on the *published* content
-articleSchema.index({ 
-  'published.title': 'text', 
-  'published.summary': 'text', 
-  'published.body': 'text' 
+// text index for the public search - on the *published* content only
+articleSchema.index({
+  'published.title': 'text',
+  'published.summary': 'text',
+  'published.body': 'text'
 });
+
+// which required fields are still empty (checked before submitting for review)
+articleSchema.methods.missingFields = function () {
+  return REQUIRED_TO_SUBMIT.filter((field) => !(this[field] || '').trim());
+};
+
+// does the working copy differ from what readers see?
+articleSchema.methods.hasUnpublishedChanges = function () {
+  const live = this.published || {};
+  return CONTENT_FIELDS.some((field) => (this[field] || '') !== (live[field] || ''));
+};
 
 module.exports = mongoose.model('Article', articleSchema);
 module.exports.STATES = ARTICLE_STATES;
+module.exports.CONTENT_FIELDS = CONTENT_FIELDS;

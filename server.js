@@ -23,6 +23,9 @@ const editorRoutes = require('./src/routes/editor');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// the list of site sections, available in every view (category dropdowns)
+app.locals.CATEGORIES = require('./src/utils/categories').CATEGORIES;
+
 // --- View engine (EJS) ---
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));

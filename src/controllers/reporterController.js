@@ -1,34 +1,83 @@
-// reporter stuff - this file handles everything the reporter can do
-// basically its like their personal workspace, they can only see their own articles
-// we double check ownership on every req bc you cant trust the client lol
+// reporter stuff - this file handles everything the reporter can do.
+// it's their personal workspace: every query filters by author = the logged in user, so changing
+// an id in the url just gives a 404 - you can't open, edit or submit someone else's article.
+// the status only changes through submit(), never through edit/autosave.
 
 const Article = require('../models/Article');
 
-// just shows the reporter their own stuff sorted by latest
+// a reporter can edit a draft, a returned article, or a live one (the edit stays private until approved).
+// a pending article is being reviewed, so it's locked - enforced HERE, not only greyed out in the page.
+const EDITABLE = ['draft', 'returned', 'published'];
+const LOCKED_MESSAGE = 'This article is waiting for editor review, so it is locked until the editor responds.';
+
+function findOwn(req) {
+  return Article.findOne({ _id: req.params.id, author: req.session.user.id });
+}
+
+// copy only the content fields from the request - status, author, published etc can't be sneaked in
+function applyContent(article, body) {
+  for (const field of Article.CONTENT_FIELDS) {
+    if (typeof body[field] === 'string') article[field] = body[field];
+  }
+}
+
+function notFound(res) {
+  return res.status(404).render('error', { status: 404, message: 'Article not found' });
+}
+
+// GET /reporter - my articles, newest activity first
 async function dashboard(req, res, next) {
   try {
-    const articles = await Article.find({ author: req.session.user.id })
-                                  .sort({ updatedAt: -1 });
+    const docs = await Article.find({ author: req.session.user.id }).sort({ updatedAt: -1 });
+    const articles = docs.map((a) => ({
+      ...a.toObject(),
+      isLive: Boolean(a.publishedAt),
+      hasUnpublishedChanges: Boolean(a.publishedAt) && a.hasUnpublishedChanges(),
+    }));
     res.render('reporter/dashboard', { articles });
   } catch (err) {
     next(err);
   }
 }
 
-// blank form for a new article
+// GET /reporter/new - empty form. the article is created on the server with the first autosave
 function newArticleForm(req, res) {
-  res.render('reporter/edit', { article: new Article(), mode: 'create' });
+  res.render('reporter/edit', { article: new Article(), isNew: true, error: null });
 }
 
+// POST /reporter/articles - create a draft (from autosave -> json, or a plain form -> redirect)
 async function create(req, res, next) {
   try {
-    // only take what we need from the form, dont let them sneak in status or author
-    const { title, summary, body, category, image } = req.body;
-    const article = new Article({
-      title, summary, body, category, image,
-      author: req.session.user.id,
-      status: 'draft'
-    });
+    const article = new Article({ author: req.session.user.id, status: 'draft' });
+    applyContent(article, req.body);
+    await article.save();
+    if (req.is('json')) return res.status(201).json({ id: article._id, savedAt: article.updatedAt });
+    res.redirect(`/reporter/articles/${article._id}/edit`);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// GET /reporter/articles/:id/edit - always loads the latest saved version from the db
+async function editForm(req, res, next) {
+  try {
+    const article = await findOwn(req);
+    if (!article) return notFound(res);
+    res.render('reporter/edit', { article, isNew: false, error: null });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// PUT /reporter/articles/:id - regular form save (autosave below is what the page normally uses)
+async function update(req, res, next) {
+  try {
+    const article = await findOwn(req);
+    if (!article) return notFound(res);
+    if (!EDITABLE.includes(article.status)) {
+      return res.status(409).render('error', { status: 409, message: LOCKED_MESSAGE });
+    }
+    applyContent(article, req.body);
     await article.save();
     res.redirect(`/reporter/articles/${article._id}/edit`);
   } catch (err) {
@@ -36,72 +85,49 @@ async function create(req, res, next) {
   }
 }
 
-// load the edit form, but only if u actually own this article
-async function editForm(req, res, next) {
+// PATCH /reporter/articles/:id/autosave - called by public/js/editor.js ~1s after typing stops
+async function autosave(req, res, next) {
   try {
-    const article = await Article.findOne({ _id: req.params.id, author: req.session.user.id });
-    if (!article) return res.status(404).send('Article not found or access denied.');
-    res.render('reporter/edit', { article, mode: 'edit' });
+    const article = await findOwn(req);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    if (!EDITABLE.includes(article.status)) return res.status(409).json({ error: LOCKED_MESSAGE });
+    applyContent(article, req.body);
+    await article.save(); // a validation error (e.g. title too long) becomes a 400 json in errorHandler
+    res.json({ savedAt: article.updatedAt });
   } catch (err) {
     next(err);
   }
 }
 
-async function update(req, res, next) {
+// POST /reporter/articles/:id/submit - draft / returned / edited live article -> pending.
+// a reporter can never publish; only the editor moves pending -> published or returned.
+async function submit(req, res, next) {
   try {
-    const article = await Article.findOne({ _id: req.params.id, author: req.session.user.id });
-    if (!article) return res.status(404).send('Not found');
-
-    // manually update only the content fields, status changes are not allowed here
-    const editable = ['title', 'summary', 'body', 'category', 'image'];
-    for (const field of editable) {
-      if (req.body[field] !== undefined) article[field] = req.body[field];
+    const article = await findOwn(req);
+    if (!article) return notFound(res);
+    if (!EDITABLE.includes(article.status)) {
+      return res.status(409).render('error', { status: 409, message: 'This article is already waiting for review.' });
     }
+
+    const missing = article.missingFields();
+    if (missing.length) {
+      return res.status(400).render('reporter/edit', {
+        article, isNew: false,
+        error: `Please fill in the ${missing.join(', ')} before submitting for review.`,
+      });
+    }
+    if (article.publishedAt && !article.hasUnpublishedChanges()) {
+      return res.status(400).render('reporter/edit', {
+        article, isNew: false,
+        error: 'Nothing has changed since the published version, so there is nothing to review.',
+      });
+    }
+
+    article.status = 'pending';
     await article.save();
     res.redirect('/reporter');
   } catch (err) {
     next(err);
-  }
-}
-
-// reporter clicks "submit for review" - moves the article to pending
-// if its already published, we still set it to pending so the editor reviews the new version
-// the public keeps seeing the old published version until the editor approves
-async function submit(req, res, next) {
-  try {
-    const article = await Article.findOne({ _id: req.params.id, author: req.session.user.id });
-    if (!article) return res.status(404).send('Not found');
-
-    if (article.status === 'draft' || article.status === 'returned' || article.status === 'published') {
-      article.status = 'pending';
-      await article.save();
-      res.redirect('/reporter');
-    } else {
-      // cant submit something thats already pending
-      res.status(400).send('Invalid transition');
-    }
-  } catch (err) {
-    next(err);
-  }
-}
-
-// this gets called every second or so while the reporter is typing
-// saves the draft without changing the status - no save button needed
-async function autosave(req, res, next) {
-  try {
-    const article = await Article.findOne({ _id: req.params.id, author: req.session.user.id });
-    if (!article) return res.status(404).json({ error: 'Not found' });
-
-    article.title = req.body.title || article.title;
-    article.summary = req.body.summary || article.summary;
-    article.body = req.body.body || article.body;
-    article.category = req.body.category || article.category;
-    article.image = req.body.image || article.image;
-
-    await article.save();
-    res.json({ success: true, timestamp: new Date() });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
   }
 }
 

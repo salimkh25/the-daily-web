@@ -2,6 +2,9 @@
 // some older articles use "Tech" / "Culture" / "Sports", so a nav link like
 // "Technology" has to match those spellings too.
 
+// the sections of the site (nav bar + the category dropdown reporters/editors pick from)
+const CATEGORIES = ['World', 'Politics', 'Business', 'Technology', 'Sport', 'Science', 'Health', 'Entertainment'];
+
 const ALIASES = [
   { test: /^tech/i, patterns: [/^tech/i, /^technology/i], label: 'Technology' },
   { test: /^(entertainment|culture)/i, patterns: [/^entertainment/i, /^culture/i], label: 'Entertainment' },
@@ -29,4 +32,4 @@ function displayCategory(category) {
   return alias ? alias.label : cat;
 }
 
-module.exports = { buildCategoryFilter, displayCategory, escapeRegex };
+module.exports = { CATEGORIES, buildCategoryFilter, displayCategory, escapeRegex };

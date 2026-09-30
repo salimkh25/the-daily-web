@@ -1,31 +1,39 @@
 <%- include('../partials/header', { title: 'My articles — The Daily Web' }) %>
 
-<!-- [TODO — GUIDE step 9] Reporter workspace.
-     Show ONLY this reporter's articles, grouped/filterable by status
-     (draft / pending / published / returned). Show the editor's note on returned articles.
-     Link to create new + edit. Status chips: see .chip styles in style.css. -->
+<!-- the reporter's workspace: only their own articles (the controller filters by author) with the
+     status of each one, the editor's note on returned ones, and submit-for-review where allowed. -->
 <section class="workspace">
   <div class="workspace__head">
     <h1><span class="section-flag">Reporter</span> My articles</h1>
     <a class="btn btn--primary" href="/reporter/new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New article</a>
   </div>
-  
+
   <% if (articles && articles.length > 0) { %>
     <ul class="article-list">
-      <% articles.forEach(function(article) { %>
+      <% articles.forEach(function(article) {
+           // a live article can be submitted again only once it has changes readers haven't seen
+           const canSubmit = article.status === 'draft' || article.status === 'returned'
+             || (article.status === 'published' && article.hasUnpublishedChanges);
+      %>
         <li class="article-list-item">
           <div class="article-info">
-            <h3><a href="/reporter/articles/<%= article._id %>/edit"><%= article.title || 'Untitled' %></a></h3>
-            <p class="meta">Last updated: <%= new Date(article.updatedAt).toLocaleDateString('en-GB') %></p>
+            <h3><a href="/reporter/articles/<%= article._id %>/edit"><%= article.title || 'Untitled draft' %></a></h3>
+            <p class="meta">
+              Last saved: <%= new Date(article.updatedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %>
+              <% if (article.isLive) { %>
+                · <a href="/article/<%= article._id %>" target="_blank" rel="noopener">live on the site</a>
+                <% if (article.hasUnpublishedChanges) { %>· your latest changes are not public yet<% } %>
+              <% } %>
+            </p>
             <% if (article.status === 'returned' && article.editorNote) { %>
-              <p class="form-message form-message--error"><strong>Editor Note:</strong> <%= article.editorNote %></p>
+              <p class="form-message form-message--error"><strong>Editor's note:</strong> <%= article.editorNote %></p>
             <% } %>
           </div>
           <div class="article-actions">
             <span class="chip chip--<%= article.status %>"><%= article.status %></span>
-            <% if (article.status === 'draft' || article.status === 'returned' || article.status === 'published') { %>
+            <% if (canSubmit) { %>
               <form action="/reporter/articles/<%= article._id %>/submit" method="POST" class="inline-form">
-                <button type="submit" class="btn btn--secondary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>Submit for Review</button>
+                <button type="submit" class="btn btn--secondary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>Submit for review</button>
               </form>
             <% } %>
           </div>
