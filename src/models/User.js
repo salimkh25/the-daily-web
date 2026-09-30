@@ -1,24 +1,20 @@
-// src/models/User.js — [TODO — you build this]
+// staff accounts. three roles exist in the system: guest (no account), reporter, editor -
+// only reporters and editors have a User document and can log in.
 //
-// Three roles exist in the system: Guest (no account), Reporter, Editor.
-// Only reporters and editors have User documents and log in.
-//
-// Requirements this model must support:
-//   - username (unique) + password
-//   - PASSWORDS ARE HASHED, never stored as plain text and not reversible.
-//       Use bcryptjs. Best practice: hash in a `pre('save')` hook when the password changed,
-//       and add an instance method `comparePassword(plain)` that calls bcrypt.compare.
-//   - role: 'reporter' | 'editor'  (drives server-side permission checks)
-//   - displayName (shown as the article byline / "כתב")
-//
+// passwords are HASHED with bcrypt before saving (pre-save hook below). a hash can't be turned back
+// into the password; at login we hash the typed password the same way and compare (comparePassword).
+// `select: false` means the hash is never loaded unless a query asks for it explicitly (only login does).
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  username:    { type: String, required: true, unique: true, trim: true, lowercase: true },
-  password:    { type: String, required: true },       // stores the bcrypt HASH, not the password
+  username:    {
+    type: String, required: true, unique: true, trim: true, lowercase: true,
+    minlength: 3, maxlength: 30, match: [/^[a-z0-9._-]+$/, 'Username may only use letters, numbers, dot, dash or underscore'],
+  },
+  password:    { type: String, required: true, select: false }, // the bcrypt HASH, never the password
   role:        { type: String, enum: ['reporter', 'editor'], required: true },
-  displayName: { type: String, required: true, trim: true },
+  displayName: { type: String, required: true, trim: true, maxlength: 60 }, // the byline on articles
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {

@@ -15,4 +15,11 @@ router.post('/articles/:id/return', editorController.returnForFixes);
 router.delete('/articles/:id', editorController.remove);
 router.get('/articles/:id/stats', statsController.renderStatsPage); // the chart page
 
+// staff management - full CRUD on users
+const userController = require('../controllers/userController');
+router.get('/users', userController.list);
+router.post('/users', userController.create);
+router.put('/users/:id', userController.update);
+router.delete('/users/:id', userController.remove);
+
 module.exports = router;
