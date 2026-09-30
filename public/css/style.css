@@ -509,11 +509,12 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); color: var(--ink); li
 
 /* KPI Stats Grid */
 .stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 24px;
 }
+.stats-grid .stat-card { flex: 1 1 150px; }
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -704,9 +705,7 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); color: var(--ink); li
     justify-content: space-between;
     flex-wrap: wrap;
   }
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .stats-grid .stat-card { flex-basis: calc(50% - 6px); }
 }
 
 @media (max-width: 768px) {
@@ -722,4 +721,11 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); color: var(--ink); li
     max-width: 100%;
     margin: 4px 0 2px;
   }
+}
+/* phones: the date takes too much room next to the wordmark and the login buttons */
+@media (max-width: 600px) {
+  .masthead__date { display: none; }
+  .masthead__utility { gap: 6px; min-width: 0; }
+  .masthead__utility .btn { padding: .45em .7em; font-size: .82rem; }
+  .wordmark { font-size: 1.35rem; }
 }

@@ -54,6 +54,7 @@ app.use((req, res, next) => {
   res.locals.currentUser = req.session.user || null;
   res.locals.currentCategory = req.query.category || '';
   res.locals.currentSearch = req.query.search || '';
+  res.locals.currentPath = req.path; // the nav only highlights "Home" on the home page
   next();
 });
 
