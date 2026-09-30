@@ -1,32 +1,44 @@
-// src/middleware/errorHandler.js — central error handling + 404. [PLUMBING — written for you]
-//
-// Mounted LAST in server.js. The spec requires that bad data / unauthorized actions never
-// crash the server, and that errors are logged. Everything funnels through here.
+// 404 + central error handler, mounted last in server.js.
+// every next(err) and every error thrown inside a controller ends up here, gets logged,
+// and turns into a clean response - bad input or a bad id should never crash the server.
 const logger = require('../utils/logger');
 
-// 404 — nothing matched. Mount this AFTER all routes, BEFORE errorHandler.
-function notFound(req, res, next) {
-  res.status(404);
-  if (req.accepts('html')) {
-    return res.render('error', { status: 404, message: 'Page not found' });
-  }
-  res.json({ error: 'Not found' });
+// Ajax/API callers get JSON, browsers navigating to a page get the error page.
+// (fetch() sends Accept: */* so req.accepts('html') alone can't tell them apart)
+function wantsJson(req) {
+  return req.originalUrl.startsWith('/api') || req.is('json') || !req.accepts('html');
 }
 
-// Central error handler. Any `next(err)` or thrown error in an async handler lands here.
-// (Express 4 needs the 4-arg signature to recognise this as an error handler.)
+// nothing matched the url
+function notFound(req, res) {
+  res.status(404);
+  if (wantsJson(req)) return res.json({ error: 'Not found' });
+  res.render('error', { status: 404, message: 'Page not found' });
+}
+
 function errorHandler(err, req, res, next) {
-  const status = err.status || 500;
+  let status = err.status || 500;
+  let message = err.message;
+
+  // "/articles/abc" -> mongoose can't cast "abc" to an ObjectId. that id can't exist, so 404.
+  if (err.name === 'CastError') {
+    status = 404;
+    message = 'Not found';
+  }
+  // schema validation failed (too long title etc) -> the client sent bad data, 400
+  if (err.name === 'ValidationError') {
+    status = 400;
+    message = Object.values(err.errors)[0].message;
+  }
+
   logger.error(`${req.method} ${req.originalUrl} -> ${status}`, err.message);
 
-  // Never leak stack traces to the client in production.
-  const clientMessage = status < 500 ? err.message : 'Something went wrong on our end.';
+  // never leak internals (stack traces, db messages) on a real server error
+  const clientMessage = status < 500 ? message : 'Something went wrong on our end.';
 
   res.status(status);
-  if (req.accepts('html')) {
-    return res.render('error', { status, message: clientMessage });
-  }
-  res.json({ error: clientMessage });
+  if (wantsJson(req)) return res.json({ error: clientMessage });
+  res.render('error', { status, message: clientMessage });
 }
 
-module.exports = { notFound, errorHandler };
+module.exports = { notFound, errorHandler, wantsJson };
