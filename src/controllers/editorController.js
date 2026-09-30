@@ -166,12 +166,16 @@ async function approve(req, res, next) {
     };
 
     article.status = 'published';
-    article.publishedAt = new Date();
     article.editorNote = ''; // wipe old notes
 
-    // push a timestamp for the analytics chart to show when this update went live
-    article.updates = article.updates || [];
-    article.updates.push(new Date());
+    const now = new Date();
+    if (article.publishedAt) {
+      // it was already live, so this is an UPDATE - mark the moment for the analytics chart.
+      // publishedAt stays the original date so an update doesn't pretend to be a new story in the feed
+      article.updates.push(now);
+    } else {
+      article.publishedAt = now; // first publication
+    }
 
     await article.save();
     res.redirect('/editor');

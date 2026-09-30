@@ -17,9 +17,10 @@ router.delete('/comments/:id', commentController.remove); // commenter deletes o
 const articleController = require('../controllers/articleController');
 router.get('/articles', articleController.list); // ?page= &search= &category= &sort= &seen=
 
-// stats endpoint for the analytics chart
+// stats endpoint for the analytics chart - editors only, checked on the server
 const statsController = require('../controllers/statsController');
-router.get('/articles/:id/stats', statsController.articleStats);
+const { requireRole } = require('../middleware/auth');
+router.get('/articles/:id/stats', requireRole('editor'), statsController.articleStats);
 
 // weather - proxied from server so the api key stays hidden
 const weatherController = require('../controllers/weatherController');
