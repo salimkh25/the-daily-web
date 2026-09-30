@@ -1,18 +1,34 @@
-<%- include('../partials/header', { title: 'Edit article — The Daily Web' }) %>
+<%- include('../partials/header', { title: 'Review article — The Daily Web' }) %>
 
 <%
-  // only a genuine pending edit to an already-live article needs the side-by-side compare
-  const showCompare = article.status === 'pending' && article.published && article.published.title;
+  const isLive = Boolean(article.publishedAt);
+  // a pending update of a live article: show what readers see now next to the proposed version
+  const showCompare = article.status === 'pending' && isLive;
+  // a live article whose working copy has changes the reporter hasn't submitted yet
+  const unsubmittedChanges = article.status === 'published' && article.hasUnpublishedChanges();
+  const categoryOptions = CATEGORIES.includes(article.category) || !article.category
+    ? CATEGORIES
+    : [article.category].concat(CATEGORIES);
 %>
 
 <section class="editor-pane">
   <div class="workspace__head">
     <div>
       <h1><span class="section-flag">Editor</span> <%= article.status === 'pending' ? 'Review' : 'Edit' %> article</h1>
-      <p class="meta">By <%= article.author ? article.author.displayName : 'Unknown' %> · Last updated: <%= new Date(article.updatedAt).toLocaleDateString('en-GB') %></p>
+      <p class="meta">
+        By <%= article.author ? article.author.displayName : 'Unknown' %> · Last updated: <%= new Date(article.updatedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %>
+        <% if (isLive) { %>
+          · <a href="/article/<%= article._id %>" target="_blank" rel="noopener">view live</a>
+          · <a href="/editor/articles/<%= article._id %>/stats">stats</a>
+        <% } %>
+      </p>
     </div>
     <span class="chip chip--<%= article.status %>"><%= article.status %></span>
   </div>
+
+  <% if (error) { %>
+    <p class="notice notice--error" role="alert"><%= error %></p>
+  <% } %>
 
   <% if (showCompare) { %>
     <!-- readers currently see the live version; the editor is deciding on the proposed change -->
@@ -40,34 +56,43 @@
     </div>
   <% } %>
 
-  <!-- Editors can edit ANY article's content (spec: the editor can view and edit every article).
-       Editing a live article publishes the change straight away; drafts/pending just save. -->
+  <% if (unsubmittedChanges) { %>
+    <p class="notice">The reporter has unsubmitted changes to this live article. They are in the form below — saving here publishes them.</p>
+  <% } %>
+
+  <!-- editors can edit ANY article (spec: the editor can view and edit every article).
+       editing a live article publishes the change straight away; drafts/pending/returned just save. -->
   <form class="editor-edit" method="POST" action="/editor/articles/<%= article._id %>?_method=PUT">
-    <h2 class="section-flag-heading"><span class="section-flag">Edit</span> <%= showCompare ? 'the proposed draft' : 'article content' %></h2>
+    <h2 class="section-flag-heading"><span class="section-flag">Edit</span> <%= showCompare ? 'the proposed version' : 'article content' %></h2>
 
     <label class="field">
       <span class="field__label">Title</span>
-      <input class="field__input" type="text" name="title" value="<%= article.title || '' %>" required />
+      <input class="field__input" type="text" name="title" maxlength="160" value="<%= article.title || '' %>" />
     </label>
 
     <label class="field">
       <span class="field__label">Category</span>
-      <input class="field__input" type="text" name="category" value="<%= article.category || '' %>" required />
+      <select class="field__input" name="category">
+        <option value="" <%= !article.category ? 'selected' : '' %>>Choose a section…</option>
+        <% categoryOptions.forEach(function (c) { %>
+          <option value="<%= c %>" <%= article.category === c ? 'selected' : '' %>><%= c %></option>
+        <% }); %>
+      </select>
     </label>
 
     <label class="field">
       <span class="field__label">Image URL</span>
-      <input class="field__input" type="url" name="image" value="<%= article.image || '' %>" />
+      <input class="field__input" type="url" name="image" maxlength="500" value="<%= article.image || '' %>" />
     </label>
 
     <label class="field">
       <span class="field__label">Summary</span>
-      <textarea class="field__input" name="summary" rows="2" required><%= article.summary || '' %></textarea>
+      <textarea class="field__input" name="summary" rows="2" maxlength="400"><%= article.summary || '' %></textarea>
     </label>
 
     <label class="field">
       <span class="field__label">Body</span>
-      <textarea class="field__input" name="body" rows="12" required><%= article.body || '' %></textarea>
+      <textarea class="field__input" name="body" rows="12"><%= article.body || '' %></textarea>
     </label>
 
     <button type="submit" class="btn btn--secondary">
@@ -76,21 +101,24 @@
     </button>
   </form>
 
-  <!-- Status actions -->
+  <!-- status actions: only a pending article can be approved or returned -->
   <div class="review-actions">
     <% if (article.status === 'pending') { %>
       <form action="/editor/articles/<%= article._id %>/approve" method="POST" class="inline-form">
         <button type="submit" class="btn btn--primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Approve &amp; Publish</button>
       </form>
-      <form action="/editor/articles/<%= article._id %>/return" method="POST" class="inline-form" style="display:flex; gap:8px; flex:1 1 320px;">
-        <input type="text" name="editorNote" placeholder="Reason for returning..." required class="field__input">
-        <button type="submit" class="btn btn--secondary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>Return for Fixes</button>
+      <form action="/editor/articles/<%= article._id %>/return" method="POST" class="inline-form review-actions__return">
+        <input type="text" name="editorNote" maxlength="1000" placeholder="What needs fixing? (sent to the reporter)" required class="field__input" aria-label="Note for the reporter">
+        <button type="submit" class="btn btn--secondary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>Return for fixes</button>
       </form>
     <% } %>
-    <form action="/editor/articles/<%= article._id %>?_method=DELETE" method="POST" class="inline-form">
+    <form action="/editor/articles/<%= article._id %>?_method=DELETE" method="POST" class="inline-form"
+          onsubmit="return confirm('Permanently delete this article, its comments and its stats? This cannot be undone.');">
       <button type="submit" class="btn btn--danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Delete</button>
     </form>
   </div>
+
+  <p><a href="/editor">← Back to the dashboard</a></p>
 </section>
 
 <%- include('../partials/footer') %>

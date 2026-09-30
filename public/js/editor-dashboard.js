@@ -1,160 +1,96 @@
-// editor-dashboard.js - real time filtering and sorting on the editor articles table
-// lets the editor sort by clicks, status or genre without waiting for full page reloads
+// editor-dashboard.js - search / filter / sort the editor's article list without reloading the page.
+// the SERVER does the filtering, sorting and paging (there can be thousands of articles, so we never
+// send them all to the browser). GET /editor?...&partial=1 answers with the ready-made <li> rows
+// (views/editor/_rows.ejs) which we swap in, and "Load more" appends the next page.
 
 document.addEventListener('DOMContentLoaded', () => {
+  const list = document.getElementById('article-list');
+  if (!list) return;
+
   const searchInput = document.getElementById('editor-search');
   const statusSelect = document.getElementById('editor-status');
   const genreSelect = document.getElementById('editor-genre');
   const sortSelect = document.getElementById('editor-sort');
-  const articleList = document.getElementById('article-list');
   const resultsCount = document.getElementById('results-count');
   const noResultsMsg = document.getElementById('no-results-msg');
+  const loadMoreBtn = document.getElementById('load-more');
   const statCards = document.querySelectorAll('.stat-card[data-filter-status]');
 
-  if (!articleList) return;
+  let page = 1;
+  let requestId = 0; // ignore answers that belong to an older filter
 
-  const items = Array.from(articleList.querySelectorAll('.article-list-item'));
-  const totalCount = items.length;
-
-  function updateView() {
-    const searchTerm = (searchInput ? searchInput.value : '').trim().toLowerCase();
-    const chosenStatus = statusSelect ? statusSelect.value : 'all';
-    const chosenGenre = genreSelect ? genreSelect.value.toLowerCase() : 'all';
-    const chosenSort = sortSelect ? sortSelect.value : 'updated';
-
-    // 1. filter the items based on search, status, and genre
-    const visibleItems = items.filter(item => {
-      const title = item.dataset.title || '';
-      const author = item.dataset.author || '';
-      const status = item.dataset.status || '';
-      const genre = item.dataset.genre || '';
-
-      // text search matches either title or author
-      const matchesSearch = !searchTerm || title.includes(searchTerm) || author.includes(searchTerm);
-
-      // status match
-      const matchesStatus = chosenStatus === 'all' || status === chosenStatus;
-
-      // genre match (handles tech vs technology alias)
-      let matchesGenre = false;
-      if (chosenGenre === 'all') {
-        matchesGenre = true;
-      } else if (chosenGenre === 'technology' || chosenGenre === 'tech') {
-        matchesGenre = genre === 'technology' || genre === 'tech';
-      } else if (chosenGenre === 'entertainment' || chosenGenre === 'culture') {
-        matchesGenre = genre === 'entertainment' || genre === 'culture';
-      } else {
-        matchesGenre = genre === chosenGenre;
-      }
-
-      return matchesSearch && matchesStatus && matchesGenre;
-    });
-
-    // 2. sort the visible items
-    visibleItems.sort((a, b) => {
-      if (chosenSort === 'views') {
-        const vA = parseInt(a.dataset.views, 10) || 0;
-        const vB = parseInt(b.dataset.views, 10) || 0;
-        return vB - vA; // highest clicked first
-      }
-
-      if (chosenSort === 'status') {
-        // editor workflow priorities: pending approval first!
-        const priority = { pending: 1, returned: 2, draft: 3, published: 4 };
-        const pA = priority[a.dataset.status] || 99;
-        const pB = priority[b.dataset.status] || 99;
-        if (pA !== pB) return pA - pB;
-        // secondary sort by newest
-        return (parseInt(b.dataset.updated, 10) || 0) - (parseInt(a.dataset.updated, 10) || 0);
-      }
-
-      if (chosenSort === 'genre') {
-        const gA = a.dataset.genre || '';
-        const gB = b.dataset.genre || '';
-        const comp = gA.localeCompare(gB);
-        if (comp !== 0) return comp;
-        return (parseInt(b.dataset.updated, 10) || 0) - (parseInt(a.dataset.updated, 10) || 0);
-      }
-
-      if (chosenSort === 'oldest') {
-        return (parseInt(a.dataset.updated, 10) || 0) - (parseInt(b.dataset.updated, 10) || 0);
-      }
-
-      // default: recently updated (newest first)
-      return (parseInt(b.dataset.updated, 10) || 0) - (parseInt(a.dataset.updated, 10) || 0);
-    });
-
-    // 3. update DOM: hide non-matching items and reorder visible items
-    items.forEach(item => {
-      item.style.display = 'none';
-    });
-
-    visibleItems.forEach(item => {
-      item.style.display = '';
-      articleList.appendChild(item); // reordering
-    });
-
-    // 4. update results counter
-    if (resultsCount) {
-      resultsCount.innerHTML = `Showing <strong>${visibleItems.length}</strong> of ${totalCount} articles`;
-    }
-
-    if (noResultsMsg) {
-      noResultsMsg.style.display = visibleItems.length === 0 ? 'block' : 'none';
-    }
-
-    // 5. update stat card highlights
-    statCards.forEach(card => {
-      const cardStatus = card.getAttribute('data-filter-status');
-      if (cardStatus === chosenStatus) {
-        card.classList.add('is-active');
-      } else {
-        card.classList.remove('is-active');
-      }
-    });
-
-    // 6. sync URL query string so browser back/refresh keeps the exact filter
-    const query = new URLSearchParams();
-    if (chosenSort && chosenSort !== 'updated') query.set('sort', chosenSort);
-    if (chosenStatus && chosenStatus !== 'all') query.set('status', chosenStatus);
-    if (chosenGenre && chosenGenre !== 'all') query.set('genre', chosenGenre);
-    if (searchTerm) query.set('search', searchTerm);
-
-    const newUrl = query.toString() ? `${window.location.pathname}?${query.toString()}` : window.location.pathname;
-    window.history.replaceState({}, '', newUrl);
+  function filterParams() {
+    const q = new URLSearchParams();
+    const search = searchInput.value.trim();
+    if (search) q.set('search', search);
+    if (statusSelect.value !== 'all') q.set('status', statusSelect.value);
+    if (genreSelect.value !== 'all') q.set('genre', genreSelect.value);
+    if (sortSelect.value !== 'updated') q.set('sort', sortSelect.value);
+    return q;
   }
 
-  // wire event listeners
+  function showCount(shown, matching) {
+    resultsCount.textContent = '';
+    const strong = document.createElement('strong');
+    strong.textContent = shown;
+    resultsCount.append('Showing ', strong, ` of ${matching} matching articles`);
+  }
+
+  async function load(append) {
+    const myId = append ? requestId : ++requestId;
+    const nextPage = append ? page + 1 : 1;
+    const q = filterParams();
+    q.set('page', nextPage);
+    q.set('partial', '1');
+    loadMoreBtn.disabled = true;
+
+    try {
+      const res = await fetch(`/editor?${q}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const html = await res.text(); // escaped by EJS on the server
+      if (myId !== requestId) return;
+
+      page = nextPage;
+      if (append) list.insertAdjacentHTML('beforeend', html);
+      else list.innerHTML = html;
+
+      const shown = list.querySelectorAll('.article-list-item').length;
+      showCount(shown, Number(res.headers.get('X-Total-Count')) || 0);
+      list.hidden = shown === 0;
+      noResultsMsg.hidden = shown > 0;
+      loadMoreBtn.hidden = res.headers.get('X-Has-More') !== '1';
+    } catch (err) {
+      console.error('Dashboard error:', err);
+      if (myId === requestId) resultsCount.textContent = 'Could not load articles. Please try again.';
+    } finally {
+      loadMoreBtn.disabled = false;
+    }
+  }
+
+  // a filter changed: highlight the matching KPI card, keep the url shareable, reload page 1
+  function refresh() {
+    statCards.forEach((card) => card.classList.toggle('is-active', card.dataset.filterStatus === statusSelect.value));
+    const q = filterParams().toString();
+    window.history.replaceState({}, '', q ? `/editor?${q}` : '/editor');
+    load(false);
+  }
+
   let searchDebounce;
-  if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      clearTimeout(searchDebounce);
-      searchDebounce = setTimeout(updateView, 120);
-    });
-  }
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(refresh, 250);
+  });
+  statusSelect.addEventListener('change', refresh);
+  genreSelect.addEventListener('change', refresh);
+  sortSelect.addEventListener('change', refresh);
+  loadMoreBtn.addEventListener('click', () => load(true));
 
-  if (statusSelect) {
-    statusSelect.addEventListener('change', updateView);
-  }
-
-  if (genreSelect) {
-    genreSelect.addEventListener('change', updateView);
-  }
-
-  if (sortSelect) {
-    sortSelect.addEventListener('change', updateView);
-  }
-
-  // clicking a KPI counter card filters by that status immediately
-  statCards.forEach(card => {
+  // clicking a KPI card filters by that status
+  statCards.forEach((card) => {
     card.addEventListener('click', () => {
-      const status = card.getAttribute('data-filter-status');
-      if (statusSelect) {
-        statusSelect.value = status;
-        updateView();
-      }
+      statusSelect.value = card.dataset.filterStatus;
+      refresh();
     });
-
     card.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();

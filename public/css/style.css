@@ -450,6 +450,8 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); color: var(--ink); li
   border: 1px solid var(--line);
 }
 .review-actions .field__input { width: auto; flex: 1 1 240px; margin: 0; }
+.review-actions__return { display: flex; gap: 8px; flex: 1 1 320px; }
+.load-more { display: flex; justify-content: center; margin: 18px 0 0; }
 
 /* Analytics card */
 .analytics .card { border-radius: var(--radius-lg); box-shadow: var(--shadow-1); cursor: default; }
