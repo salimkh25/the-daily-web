@@ -1,8 +1,6 @@
-// server.js — application entry point. [PLUMBING — written for you]
-//
-// Boots Express, wires the view engine, sessions, static files, routes and error handling,
-// then connects to MongoDB and starts listening. You generally won't need to edit this much;
-// you add features by filling in the routes/controllers/models it already mounts.
+// server.js - application entry point.
+// sets up express (EJS views, body parsing, sessions stored in mongodb, static files), mounts the
+// route modules and the error handlers, then connects to MongoDB and starts listening.
 const path = require('path');
 const express = require('express');
 const session = require('express-session');
@@ -13,7 +11,7 @@ const connectDB = require('./config/db');
 const logger = require('./src/utils/logger');
 const { notFound, errorHandler } = require('./src/middleware/errorHandler');
 
-// Route modules (each is an express.Router). Stubs for now — you fill them in.
+// route modules (each one is an express.Router)
 const publicRoutes = require('./src/routes/index');
 const apiRoutes = require('./src/routes/api');
 const authRoutes = require('./src/routes/auth');

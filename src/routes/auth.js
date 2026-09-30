@@ -1,4 +1,4 @@
-// src/routes/auth.js — [TODO — GUIDE step 4]  login / logout
+// login / logout for reporters and editors
 const router = require('express').Router();
 const authController = require('../controllers/authController');
 

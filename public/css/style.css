@@ -1,8 +1,7 @@
 /* =====================================================================
-   The Daily Web — style.css  [DESIGN FOUNDATION — written for you]
-   Implements design.md: vibrant-red, BBC-style news. Flexbox only (no Grid,
-   no framework). All colours/fonts are tokens on :root — change them in ONE
-   place. Build your pages using these classes; extend as needed.
+   The Daily Web — style.css
+   Implements design.md: vibrant-red, BBC-style news. Flexbox layout, no
+   framework. All colours/fonts are tokens on :root — change them in ONE place.
    ===================================================================== */
 
 /* ---- 1. Tokens ---- */
@@ -75,7 +74,7 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); color: var(--ink); li
   font-size: 1.1rem;
 }
 
-/* Breaking eyebrow (for your use) — the one lively motion moment. */
+/* Breaking eyebrow — the one lively motion moment. */
 .breaking {
   display: inline-flex; align-items: center; gap: .45em;
   background: var(--red-wash); color: var(--red-deep);

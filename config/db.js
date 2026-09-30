@@ -1,6 +1,4 @@
-// config/db.js — Mongoose connection. [PLUMBING — written for you]
-//
-// Called once from server.js at startup. Uses MONGODB_URI from the environment.
+// mongodb connection (mongoose). called once from server.js at startup, uses MONGODB_URI from .env
 const mongoose = require('mongoose');
 const logger = require('../src/utils/logger');
 
