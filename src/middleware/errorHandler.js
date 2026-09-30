@@ -31,7 +31,9 @@ function errorHandler(err, req, res, next) {
     message = Object.values(err.errors)[0].message;
   }
 
-  logger.error(`${req.method} ${req.originalUrl} -> ${status}`, err.message);
+  // real failures go to logs/error.log, client mistakes (4xx) are just a warning in the console
+  const log = status >= 500 ? logger.error : logger.warn;
+  log(`${req.method} ${req.originalUrl} -> ${status}`, err.message);
 
   // never leak internals (stack traces, db messages) on a real server error
   const clientMessage = status < 500 ? message : 'Something went wrong on our end.';

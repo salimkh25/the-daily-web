@@ -1,8 +1,7 @@
 <%- include('partials/header') %>
 
-<!-- [SKELETON] Design is here; wire real data via articleController.renderArticle (GUIDE step 8).
-     REQUIREMENT: the full article body must be in this server-rendered HTML (SEO) — it must NOT
-     depend on JavaScript. Only the comments and sidebar hydrate via Ajax. -->
+<!-- the full article is rendered on the server so search engines get it in the first html response,
+     without running any javascript. only posting/editing comments and the weather use Ajax. -->
 
 <div class="article-layout">
   <article class="article">
@@ -16,9 +15,11 @@
       <div class="article__image card__media--placeholder"></div>
     <% } %>
 
-    <!-- Full body, server-rendered. TODO: render real body (consider allowing simple paragraphs). -->
+    <!-- plain text body, one <p> per paragraph. <%= %> escapes it, so a reporter can't inject html -->
     <div class="article__body">
-      <p><%= article.body %></p>
+      <% paragraphs.forEach(function (p) { %>
+        <p><%= p %></p>
+      <% }); %>
     </div>
 
     <%- include('partials/comments') %>
@@ -29,7 +30,7 @@
   </aside>
 </div>
 
-<!-- Client-side Ajax for posting comments (the worked example). -->
+<!-- Ajax for posting / editing / deleting comments without reloading the page -->
 <script src="/js/comments.js" defer></script>
 
 <%- include('partials/footer') %>
