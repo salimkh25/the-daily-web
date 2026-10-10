@@ -1,6 +1,6 @@
 // editor controll - this is the management side, editors can see and edit ALL articles
 // no ownership check here, they're the boss basically
-// status changes go thru specific endpoints (approve/return), not the general update
+// status changes go through specific endpoints (approve/return), not the general update
 
 const Article = require('../models/Article');
 const Comment = require('../models/Comment');
@@ -102,7 +102,7 @@ async function dashboard(req, res, next) {
     }
 
     // counters for the KPI cards across the whole site
-    const [total, statusAgg, viewsAgg, genreAgg] = await Promise.all([
+    const [total, statusAgg, viewsAgg, genreAgg] = await Promise.all([ // Promise.all runs the 4 queries in parallel
       Article.countDocuments(),
       Article.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
       Article.aggregate([{ $group: { _id: null, totalClicks: { $sum: '$viewsCount' } } }]),
@@ -143,7 +143,7 @@ async function review(req, res, next) {
   }
 }
 
-// editor can fix typos etc, but cant change status from here
+// editor can change the text, but cant change status from here
 async function update(req, res, next) {
   try {
     const article = await Article.findById(req.params.id).populate('author', 'displayName');
@@ -153,8 +153,7 @@ async function update(req, res, next) {
       if (typeof req.body[field] === 'string') article[field] = req.body[field];
     }
 
-    // if the article is already live, an editor's edit goes straight to readers -
-    // the editor is the authority, so no re-approval needed for their own change.
+    // if the article is already live, an editor's edit goes straight to readers - the editor is the authority
     // (drafts / pending / returned just save the content, status unchanged)
     if (article.status === 'published') {
       const missing = article.missingFields();
@@ -190,7 +189,7 @@ async function approve(req, res, next) {
 
     publishWorkingCopy(article);
     article.status = 'published';
-    article.editorNote = ''; // wipe old notes
+    article.editorNote = ''; // delete old notes
 
     const now = new Date();
     if (article.publishedAt) {

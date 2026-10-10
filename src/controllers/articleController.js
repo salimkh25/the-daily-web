@@ -1,6 +1,6 @@
 // public side of the articles: the home page, the article page and the feed api (open to everyone).
 //
-// the public only ever sees the LAST APPROVED version of an article, which lives in `article.published`.
+// the public only sees the LAST APPROVED version of an article, from `article.published`.
 // an article is public once it has a publishedAt date - even while a newer edit waits for the editor,
 // readers keep getting the approved copy. reporter/editor CRUD lives in reporterController/editorController.
 
@@ -10,15 +10,15 @@ const View = require('../models/View');
 const Comment = require('../models/Comment');
 const { buildCategoryFilter, displayCategory } = require('../utils/categories');
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 20; // load 20 articles at a time for the infinite scroll
 const MAX_PAGE_SIZE = 50;
 
 // only what a feed card needs. keeps the json small and never sends editor notes,
 // the workflow status or an unapproved draft to the browser.
-const FEED_FIELDS = 'published.title published.summary published.image published.category publishedAt author viewsCount';
+const FEED_FIELDS = 'published.title published.summary published.image published.category publishedAt author viewsCount'; // ignores the body
 const PAGE_FIELDS = FEED_FIELDS + ' published.body';
 
-function toPublicArticle(a, { withBody = false } = {}) {
+function toPublicArticle(a, { withBody = false } = {}) { // builds the public view of an article from its approved copy only (no drafts, no notes)
   const p = a.published || {};
   const out = {
     _id: a._id,
@@ -86,7 +86,7 @@ async function renderHome(req, res, next) {
     // the 3-story hero only belongs on the plain front page (newest first, no filters).
     // it's just page 1 split in two, so feed.js still asks for page 2 next.
     const plainFrontPage = !category && !search && !seenKey && sortKey === 'date';
-    const showHero = plainFrontPage && articles.length >= 3;
+    const showHero = plainFrontPage && articles.length >= 3; // the hero needs at least 3 articles to look right
 
     let pageTitle = 'The Daily Web';
     if (search) pageTitle = `Search: "${search}" — The Daily Web`;

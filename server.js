@@ -1,4 +1,3 @@
-// server.js - application entry point.
 // sets up express (EJS views, body parsing, sessions stored in mongodb, static files), mounts the
 // route modules and the error handlers, then connects to MongoDB and starts listening.
 const path = require('path');
@@ -12,9 +11,9 @@ const logger = require('./src/utils/logger');
 const { notFound, errorHandler } = require('./src/middleware/errorHandler');
 
 // route modules (each one is an express.Router)
-const publicRoutes = require('./src/routes/index');
+const publicRoutes = require('./src/routes/index'); // the general public pages
 const apiRoutes = require('./src/routes/api');
-const authRoutes = require('./src/routes/auth');
+const authRoutes = require('./src/routes/auth');    // login / logout
 const reporterRoutes = require('./src/routes/reporter');
 const editorRoutes = require('./src/routes/editor');
 
@@ -24,11 +23,11 @@ const PORT = process.env.PORT || 3000;
 // the list of site sections, available in every view (category dropdowns)
 app.locals.CATEGORIES = require('./src/utils/categories').CATEGORIES;
 
-// --- View engine (EJS) ---
+// --- View (EJS) ---
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// --- Body parsing (built into Express 4.16+) ---
+// --- Body parsing (built into Express) ---
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 

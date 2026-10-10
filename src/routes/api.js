@@ -1,5 +1,5 @@
 // all the ajax/api endpoints in one place
-// comments was the worked example we had to study, the rest we added ourselves
+// (REST-style json: feed, comments, reporter autosave, editor actions, stats, weather)
 
 const router = require('express').Router();
 

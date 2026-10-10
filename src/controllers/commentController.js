@@ -1,6 +1,3 @@
-// comments on articles (REST, json). guests comment with just a display name.
-// same shape as every controller: async handler, try/catch -> next(err) so the central error handler
-// deals with failures, input validated on the SERVER, proper status codes.
 // the 3-comments-per-minute limit is a middleware that runs before create() (see routes/api.js).
 const mongoose = require('mongoose');
 const Comment = require('../models/Comment');
@@ -14,7 +11,7 @@ async function listByArticle(req, res, next) {
       return res.status(400).json({ error: 'Invalid article id' });
     }
     const comments = await Comment.find({ article: articleId })
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1 }) // newest first
       .lean();
     res.json(comments);
   } catch (err) {
@@ -38,7 +35,7 @@ async function create(req, res, next) {
     }
 
     // only real, public articles can be commented on
-    const articleIsPublic = await Article.exists({ _id: articleId, publishedAt: { $ne: null } });
+    const articleIsPublic = await Article.exists({ _id: articleId, publishedAt: { $ne: null } }); // a published article has a date, otherwise it's null
     if (!articleIsPublic) {
       return res.status(404).json({ error: 'Article not found' });
     }

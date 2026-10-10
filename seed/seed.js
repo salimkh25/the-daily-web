@@ -8,7 +8,7 @@
 // produce the same data, so "the article with 3 updates" is the same one every time you demo.
 //
 // what it creates:
-//   - 1 editor + 4 reporters
+//   - 2 editors + 4 reporters
 //   - 520 articles in all 8 sections and all 4 states: published, pending, returned, draft
 //     (incl. edits of LIVE articles waiting for approval, to demo the side-by-side compare)
 //   - published articles with 1-3 updates after publication (marked on the analytics chart)
@@ -358,15 +358,6 @@ function makeContent(category, index) {
   };
 }
 
-// optional: `npm run seed -- --scraped` uses a local seed/scraped.json instead (not in the repo)
-function loadScraped() {
-  const fs = require('fs');
-  const file = require('path').join(__dirname, 'scraped.json');
-  if (!process.argv.includes('--scraped')) return null;
-  if (!fs.existsSync(file)) throw new Error('--scraped was given but seed/scraped.json does not exist');
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
-}
-
 // ---------- view statistics ----------
 function hourStart(ms) {
   const d = new Date(ms);
@@ -420,18 +411,19 @@ async function insertInChunks(collection, docs, size = 5000) {
 
 async function seed() {
   const uri = process.env.MONGODB_URI;
-  if (!uri) throw new Error('MONGODB_URI not set - copy .env.example to .env first.');
+  if (!uri) throw new Error('MONGODB_URI not set - create a .env file first (see README).');
   await mongoose.connect(uri);
   await Promise.all([User.init(), Article.init(), Comment.init(), View.init()]); // make sure indexes exist (text search!)
-
-  const scraped = loadScraped();
 
   console.log('Clearing existing data...');
   await Promise.all([User.deleteMany({}), Article.deleteMany({}), Comment.deleteMany({}), View.deleteMany({})]);
   await mongoose.connection.db.collection('sessions').deleteMany({}); // old logins point at deleted users
 
   console.log('Creating users...');
-  const editor = await User.create({ username: 'salom2', password: '12345678', role: 'editor', displayName: 'Editor Boss' });
+  const editors = [
+    await User.create({ username: 'salom2', password: '12345678', role: 'editor', displayName: 'Editor Boss' }),
+    await User.create({ username: 'editor2', password: 'password', role: 'editor', displayName: 'Second Editor' })
+  ];
   const reporters = [
     await User.create({ username: 'salim', password: '12345678', role: 'reporter', displayName: 'Salim K' }),
     await User.create({ username: 'reporter2', password: 'password', role: 'reporter', displayName: 'John Smith' }),
@@ -458,11 +450,7 @@ async function seed() {
   for (const { kind, count } of PLAN) {
     for (let n = 0; n < count; n++, index++) {
       const category = CATEGORIES[index % CATEGORIES.length];
-      let content = makeContent(category, index);
-      if (scraped && scraped.length) {
-        const s = scraped[index % scraped.length];
-        content = { ctx: content.ctx, title: s.title, summary: s.summary || '', body: s.content || s.body || '', image: s.image || content.image, category };
-      }
+      const content = makeContent(category, index);
       const author = reporters[index % 7 < 3 ? 0 : index % reporters.length]._id; // salim writes a bit more
       const _id = new mongoose.Types.ObjectId();
       const doc = {
@@ -548,7 +536,7 @@ async function seed() {
   console.log(`  Comments:      ${comments.length}`);
   console.log(`  View buckets:  ${views.length}`);
   console.log('\n=== Demo logins ===');
-  console.log(`  Editor:    ${editor.username} / 12345678`);
+  console.log(`  Editors:   salom2 / 12345678, editor2 / password`);
   console.log('  Reporters: salim / 12345678, reporter2 / password, reporter3 / password, reporter4 / password');
 
   await mongoose.disconnect();
