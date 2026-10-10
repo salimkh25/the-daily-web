@@ -1,67 +1,94 @@
-<%- include('../partials/header', { title: 'Edit article — The Daily Web' }) %>
+<%- include('../partials/header', { title: (isNew ? 'New article' : 'Edit article') + ' — The Daily Web' }) %>
 
-<!-- [TODO — GUIDE step 9] Create / edit article form for reporters.
-     AUTO-SAVE: no "Save" button — save continuously to the server (debounced PATCH to
-     /reporter/articles/:id/autosave) so work survives refresh / browser close / another computer.
-     When editing a PUBLISHED article, make clear the public still sees the approved version. -->
+<!-- create / edit form for reporters. there is no save button: public/js/editor.js autosaves to the
+     server while typing, so a refresh, a closed browser or another computer never loses work.
+     a pending article is locked (the server refuses edits too, not just these disabled fields). -->
+<%
+  const locked = article.status === 'pending';
+  const categoryOptions = CATEGORIES.includes(article.category) || !article.category
+    ? CATEGORIES
+    : [article.category].concat(CATEGORIES); // keep an old non-standard category selectable
+%>
 <section class="editor-pane">
   <div class="workspace__head">
-    <h1><span class="section-flag">Reporter</span> <%= mode === 'create' ? 'New article' : 'Edit article' %></h1>
-    <% if (mode === 'edit') { %>
+    <h1><span class="section-flag">Reporter</span> <%= isNew ? 'New article' : 'Edit article' %></h1>
+    <% if (!isNew) { %>
       <span class="chip chip--<%= article.status %>"><%= article.status %></span>
     <% } %>
   </div>
 
-  <% if (article.status === 'published') { %>
-    <div class="scaffold-note">
-      <strong>Note:</strong> This article is already published. Your edits here will be saved as a pending draft. 
-      The public will continue to see the current live version until an editor approves your new changes.
+  <% if (error) { %>
+    <p class="notice notice--error" role="alert"><%= error %></p>
+  <% } %>
+
+  <% if (article.status === 'returned' && article.editorNote) { %>
+    <div class="notice"><strong>Editor's note:</strong> <%= article.editorNote %></div>
+  <% } %>
+
+  <% if (locked) { %>
+    <div class="notice">This article is waiting for editor review, so it is locked. You can edit it again if the editor returns it for fixes.</div>
+  <% } else if (article.publishedAt) { %>
+    <div class="notice">
+      <strong>This article is live.</strong> Your edits are saved privately — readers keep seeing the approved version
+      until you submit the changes and an editor approves them.
     </div>
   <% } %>
 
-  <div id="autosave-indicator" class="meta" style="margin-bottom: 1rem; color: var(--color-text-muted);">
-    <%= mode === 'create' ? 'Draft will auto-save once created.' : 'All changes saved.' %>
-  </div>
+  <% if (!locked) { %>
+    <p id="autosave-indicator" class="meta" role="status" aria-live="polite">
+      <%= isNew ? 'Start typing — your draft saves automatically.' : 'All changes saved.' %>
+    </p>
+  <% } %>
 
-  <form id="article-form" action="<%= mode === 'create' ? '/reporter/articles' : `/reporter/articles/${article._id}?_method=PUT` %>" method="POST">
-    
-    <% if (mode === 'edit') { %>
-      <input type="hidden" id="article-id" value="<%= article._id %>">
-    <% } %>
-
+  <form id="article-form" method="POST"
+        action="<%= isNew ? '/reporter/articles' : `/reporter/articles/${article._id}?_method=PUT` %>"
+        data-article-id="<%= isNew ? '' : article._id %>">
     <label class="field">
       <span class="field__label">Title</span>
-      <input class="field__input" type="text" name="title" id="field-title" value="<%= article.title || '' %>" required <%= article.status === 'pending' ? 'disabled' : '' %>/>
+      <input class="field__input" type="text" name="title" maxlength="160" value="<%= article.title || '' %>" <%= locked ? 'disabled' : '' %> />
     </label>
 
     <label class="field">
       <span class="field__label">Category</span>
-      <input class="field__input" type="text" name="category" id="field-category" value="<%= article.category || '' %>" required <%= article.status === 'pending' ? 'disabled' : '' %>/>
+      <select class="field__input" name="category" <%= locked ? 'disabled' : '' %>>
+        <option value="" <%= !article.category ? 'selected' : '' %>>Choose a section…</option>
+        <% categoryOptions.forEach(function (c) { %>
+          <option value="<%= c %>" <%= article.category === c ? 'selected' : '' %>><%= c %></option>
+        <% }); %>
+      </select>
     </label>
-    
+
     <label class="field">
-      <span class="field__label">Image URL (Optional)</span>
-      <input class="field__input" type="url" name="image" id="field-image" value="<%= article.image || '' %>" <%= article.status === 'pending' ? 'disabled' : '' %>/>
+      <span class="field__label">Image URL (optional)</span>
+      <input class="field__input" type="url" name="image" maxlength="500" value="<%= article.image || '' %>" <%= locked ? 'disabled' : '' %> />
     </label>
 
     <label class="field">
       <span class="field__label">Summary (1-2 lines)</span>
-      <textarea class="field__input" name="summary" id="field-summary" rows="2" required <%= article.status === 'pending' ? 'disabled' : '' %>><%= article.summary || '' %></textarea>
+      <textarea class="field__input" name="summary" rows="2" maxlength="400" <%= locked ? 'disabled' : '' %>><%= article.summary || '' %></textarea>
     </label>
 
     <label class="field">
-      <span class="field__label">Content</span>
-      <textarea class="field__input" name="body" id="field-body" rows="15" required <%= article.status === 'pending' ? 'disabled' : '' %>><%= article.body || '' %></textarea>
+      <span class="field__label">Content <span class="muted">(leave an empty line between paragraphs)</span></span>
+      <textarea class="field__input" name="body" rows="15" <%= locked ? 'disabled' : '' %>><%= article.body || '' %></textarea>
     </label>
-
-    <% if (mode === 'create') { %>
-      <button class="btn btn--primary" type="submit">Create Draft</button>
-    <% } %>
   </form>
-</section>
 
-<% if (mode === 'edit' && article.status !== 'pending') { %>
-  <script src="/js/editor.js" defer></script>
-<% } %>
+  <% if (!locked) { %>
+    <!-- separate form so pressing enter in a field can never submit the article by accident.
+         editor.js saves any pending changes first, then lets this submit go through. -->
+    <form id="submit-form" class="review-actions" method="POST"
+          action="<%= isNew ? '' : `/reporter/articles/${article._id}/submit` %>" <%= isNew ? 'hidden' : '' %>>
+      <span class="meta">Ready? Send it to an editor for approval — you can't publish it yourself.</span>
+      <button type="submit" class="btn btn--primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        Submit for review
+      </button>
+    </form>
+    <script src="/js/editor.js" defer></script>
+  <% } %>
+
+  <p><a href="/reporter">← Back to my articles</a></p>
+</section>
 
 <%- include('../partials/footer') %>

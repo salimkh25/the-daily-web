@@ -1,8 +1,7 @@
 <%- include('partials/header', { title: 'Staff login — The Daily Web' }) %>
 
-<!-- [TODO — GUIDE step 4] Staff login form for reporters and editors.
-     POST to /auth/login. Show `error` (passed from authController) if login failed.
-     Never say whether the username or the password was wrong — just "Invalid credentials". -->
+<!-- staff login for reporters and editors. on failure authController re-renders this page with
+     a generic "Invalid credentials" (never saying whether the username or the password was wrong). -->
 <section class="auth">
   <span class="section-flag">Staff</span>
   <h1 class="auth__title">Log in</h1>

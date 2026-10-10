@@ -1,11 +1,6 @@
-// src/models/Comment.js — [WORKED EXAMPLE ✅ fully implemented]
-//
-// This is your reference for how a Mongoose model should look. Study it, then build
-// Article.js, User.js and View.js in the same style. Notice:
-//   - a clear schema with types, `required`, `trim`, `maxlength` (server-side validation)
-//   - a reference to another model via ObjectId + `ref`
-//   - `timestamps` so we get createdAt/updatedAt for free
-//   - an index on the field we query by most (articleId), for speed at scale
+// a reader's comment on an article. guests don't have accounts, they just type a display name.
+// validation lives in the schema (required / trim / maxlength) so bad data never reaches the db,
+// and the (article, createdAt) index keeps "newest comments of this article" fast at scale.
 const mongoose = require('mongoose');
 
 const commentSchema = new mongoose.Schema(

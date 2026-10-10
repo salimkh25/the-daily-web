@@ -16,7 +16,7 @@
     "ejs",
     "mvc"
   ],
-  "author": "salimkh25 and team",
+  "author": "salimkh25",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -26,9 +26,5 @@
     "express-session": "^1.18.1",
     "method-override": "^3.0.0",
     "mongoose": "^8.9.5"
-  },
-  "devDependencies": {
-    "fast-xml-parser": "^5.11.1",
-    "node-fetch": "^3.3.2"
   }
 }

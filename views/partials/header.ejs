@@ -45,7 +45,7 @@
     </div>
     <!-- The thick red rule: the signature element. -->
     <div class="masthead__rule"></div>
-    <!-- Category nav (BBC-style). Real categories with dynamic active state -->
+    <!-- Category nav (BBC-style) with the active section highlighted -->
     <% 
       const activeCat = (typeof currentCategory !== 'undefined' && currentCategory) ? currentCategory.toLowerCase() : '';
       const navSections = [
@@ -61,7 +61,7 @@
     %>
     <nav class="catnav" aria-label="Sections">
       <div class="container catnav__inner">
-        <a class="catnav__link <%= activeCat === '' ? 'is-active' : '' %>" href="/" data-category="">Home</a>
+        <a class="catnav__link <%= activeCat === '' && currentPath === '/' ? 'is-active' : '' %>" href="/" data-category="">Home</a>
         <% navSections.forEach(function(sec) { 
              const isAct = sec.aliases 
                ? sec.aliases.includes(activeCat) 

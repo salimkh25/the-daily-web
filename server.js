@@ -1,8 +1,5 @@
-// server.js — application entry point. [PLUMBING — written for you]
-//
-// Boots Express, wires the view engine, sessions, static files, routes and error handling,
-// then connects to MongoDB and starts listening. You generally won't need to edit this much;
-// you add features by filling in the routes/controllers/models it already mounts.
+// sets up express (EJS views, body parsing, sessions stored in mongodb, static files), mounts the
+// route modules and the error handlers, then connects to MongoDB and starts listening.
 const path = require('path');
 const express = require('express');
 const session = require('express-session');
@@ -13,21 +10,24 @@ const connectDB = require('./config/db');
 const logger = require('./src/utils/logger');
 const { notFound, errorHandler } = require('./src/middleware/errorHandler');
 
-// Route modules (each is an express.Router). Stubs for now — you fill them in.
-const publicRoutes = require('./src/routes/index');
+// route modules (each one is an express.Router)
+const publicRoutes = require('./src/routes/index'); // the general public pages
 const apiRoutes = require('./src/routes/api');
-const authRoutes = require('./src/routes/auth');
+const authRoutes = require('./src/routes/auth');    // login / logout
 const reporterRoutes = require('./src/routes/reporter');
 const editorRoutes = require('./src/routes/editor');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- View engine (EJS) ---
+// the list of site sections, available in every view (category dropdowns)
+app.locals.CATEGORIES = require('./src/utils/categories').CATEGORIES;
+
+// --- View (EJS) ---
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// --- Body parsing (built into Express 4.16+) ---
+// --- Body parsing (built into Express) ---
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
@@ -53,6 +53,7 @@ app.use((req, res, next) => {
   res.locals.currentUser = req.session.user || null;
   res.locals.currentCategory = req.query.category || '';
   res.locals.currentSearch = req.query.search || '';
+  res.locals.currentPath = req.path; // the nav only highlights "Home" on the home page
   next();
 });
 

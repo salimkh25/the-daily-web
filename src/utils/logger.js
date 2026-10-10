@@ -1,7 +1,5 @@
-// src/utils/logger.js — tiny logger. [PLUMBING — written for you]
-//
-// The spec requires logging errors and significant operational events. This keeps it
-// dependency-free: timestamped lines to the console, and errors also appended to logs/error.log.
+// tiny logger with no dependencies: timestamped lines to the console, and errors are also
+// appended to logs/error.log (the spec asks us to log errors and important operational events).
 const fs = require('fs');
 const path = require('path');
 

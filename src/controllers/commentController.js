@@ -1,13 +1,7 @@
-// src/controllers/commentController.js — [WORKED EXAMPLE ✅ fully implemented]
-//
-// Your reference for a REST controller. Notice the shape you'll reuse everywhere:
-//   - each handler is `async (req, res, next)`
-//   - all DB work is wrapped in try/catch; on error we call next(err) so the central
-//     errorHandler deals with it and the server never crashes
-//   - we validate input on the SERVER (never trust the client)
-//   - we return JSON for Ajax endpoints, with the right HTTP status codes
+// the 3-comments-per-minute limit is a middleware that runs before create() (see routes/api.js).
 const mongoose = require('mongoose');
 const Comment = require('../models/Comment');
+const Article = require('../models/Article');
 
 // GET /api/articles/:articleId/comments  -> list newest first
 async function listByArticle(req, res, next) {
@@ -17,7 +11,7 @@ async function listByArticle(req, res, next) {
       return res.status(400).json({ error: 'Invalid article id' });
     }
     const comments = await Comment.find({ article: articleId })
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1 }) // newest first
       .lean();
     res.json(comments);
   } catch (err) {
@@ -26,7 +20,6 @@ async function listByArticle(req, res, next) {
 }
 
 // POST /api/articles/:articleId/comments  -> create one, return it
-// (The 3-per-minute rate limit is applied by middleware BEFORE this runs — see routes/api.js.)
 async function create(req, res, next) {
   try {
     const { articleId } = req.params;
@@ -34,12 +27,17 @@ async function create(req, res, next) {
       return res.status(400).json({ error: 'Invalid article id' });
     }
 
-    // Server-side validation. The schema also validates, but checking here lets us return a
-    // friendly 400 instead of letting a ValidationError bubble up.
+    // the schema validates too, but checking here gives a friendly 400 message
     const author = (req.body.author || '').trim();
     const body = (req.body.body || '').trim();
     if (!author || !body) {
       return res.status(400).json({ error: 'Name and comment are both required.' });
+    }
+
+    // only real, public articles can be commented on
+    const articleIsPublic = await Article.exists({ _id: articleId, publishedAt: { $ne: null } }); // a published article has a date, otherwise it's null
+    if (!articleIsPublic) {
+      return res.status(404).json({ error: 'Article not found' });
     }
 
     const comment = await Comment.create({ article: articleId, author, body });
@@ -50,7 +48,6 @@ async function create(req, res, next) {
 
     res.status(201).json(comment); // client appends this without reloading the list
   } catch (err) {
-    // Turn Mongoose validation errors into a clean 400.
     if (err.name === 'ValidationError') {
       return res.status(400).json({ error: Object.values(err.errors)[0].message });
     }

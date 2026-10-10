@@ -1,20 +1,9 @@
-// src/controllers/authController.js — [TODO — you build this]
+// login / logout for reporters and editors (guests never log in).
 //
-// Login/logout for reporters and editors. Guests never log in.
-//
-//   renderLogin(req, res)     GET  /auth/login   -> render 'login'
-//   login(req, res, next)     POST /auth/login   -> find user by username, verify password with
-//                                                   user.comparePassword(...). On success set
-//                                                   req.session.user = { id, role, displayName }
-//                                                   and redirect: reporter -> /reporter, editor -> /editor.
-//                                                   On failure re-render login with an error (never
-//                                                   reveal whether it was the username or password).
-//   logout(req, res)          POST /auth/logout  -> req.session.destroy(...) then redirect '/'.
-//
-// SECURITY reminders:
-//   - Never store or compare plain-text passwords (bcrypt only — see User model).
-//   - Put ONLY non-sensitive identity in the session (id, role, displayName). The role in the
-//     session is the source of truth for permissions — never trust a role sent from the browser.
+// on login we store only { id, role, displayName } in the session. the session lives in mongodb
+// (connect-mongo), so a server restart doesn't log anyone out, and the role in it comes from the db -
+// the browser only holds a random session id cookie, it can't change its own role.
+// the error message never says whether the username or the password was wrong.
 
 const User = require('../models/User');
 
@@ -31,7 +20,8 @@ async function login(req, res, next) {
       return res.render('login', { error: 'Invalid credentials' });
     }
 
-    const user = await User.findOne({ username: username.trim().toLowerCase() });
+    // the password hash is select:false in the model, so ask for it explicitly here
+    const user = await User.findOne({ username: String(username).trim().toLowerCase() }).select('+password');
     
     // Check user and password
     if (!user || !(await user.comparePassword(password))) {

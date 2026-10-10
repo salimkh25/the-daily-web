@@ -1,7 +1,6 @@
-<!-- views/partials/comments.ejs — [WORKED EXAMPLE ✅]
-     Server-renders the existing comments (so they're in the initial HTML), plus a form that
-     posts a new comment via Ajax (public/js/comments.js) and appends it WITHOUT a full reload.
-     Expects locals: `comments` (array) and `article` (with _id). -->
+<!-- comments: the existing ones are rendered on the server (they're in the first html), and the
+     form posts a new one via Ajax (public/js/comments.js), which adds it to the list without a reload.
+     needs locals: `comments` (array) and `article` (with _id). -->
 <section class="comments" id="comments" data-article-id="<%= article._id %>">
   <h2 class="section-flag-heading"><span class="section-flag">Comments</span> <span class="comments__count" id="comment-count"><%= comments.length %></span></h2>
 

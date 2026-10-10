@@ -1,78 +1,39 @@
 <%- include('../partials/header', { title: 'Impact Analytics — The Daily Web' }) %>
 
-<!-- [TODO — GUIDE step 11] Impact Analytics.
-     Draw a chart of views over time for the selected article, with clear markers at each point
-     an editor published an update, so you can read how views changed before vs after an update.
-     Use Chart.js OR a <canvas> you draw yourself. Fetch the data from /api/articles/:id/stats. -->
-<section class="workspace">
+<!-- views over time for one article, with a marker at every update an editor published.
+     the data comes from GET /api/articles/:id/stats, drawn by public/js/stats.js with Chart.js -->
+<section class="workspace analytics">
   <div class="workspace__head">
-    <h1><span class="section-flag">Editor</span> Impact Analytics</h1>
+    <div>
+      <h1><span class="section-flag">Editor</span> Impact Analytics</h1>
+      <p class="meta">
+        <% if (article.publishedAt) { %>
+          <a href="/article/<%= article._id %>" target="_blank" rel="noopener"><%= article.title %></a>
+          · first published <%= new Date(article.publishedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) %>
+          · <%= article.updateCount %> update<%= article.updateCount === 1 ? '' : 's' %> since
+        <% } else { %>
+          <%= article.title %> · not published yet
+        <% } %>
+      </p>
+    </div>
     <a class="btn btn--secondary" href="/editor">Back to Dashboard</a>
   </div>
 
-  <div class="card" style="padding: 2rem;">
-    <canvas id="impact-chart" width="800" height="400"></canvas>
+  <div class="card analytics__chart">
+    <canvas id="impact-chart" data-article-id="<%= article._id %>" role="img" aria-label="Views of this article over time, with the published updates marked"></canvas>
+    <p class="muted analytics__empty" id="chart-empty" hidden>No views recorded for this article yet.</p>
   </div>
+  <p class="meta analytics__hint">Red line = views. Dark dashed line with ▲ = an editor approved &amp; published an update at that moment.</p>
+
+  <section>
+    <h2 class="section-flag-heading"><span class="section-flag">Before vs after</span> each update</h2>
+    <ul class="impact-list" id="impact-list">
+      <li class="muted">Loading…</li>
+    </ul>
+  </section>
 </section>
 
-<!-- Include Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script>
-  async function loadStats() {
-    try {
-      const res = await fetch('/api/articles/<%= articleId %>/stats');
-      const data = await res.json();
-      
-      const labels = data.series.map(s => new Date(s.t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' }));
-      const values = data.series.map(s => s.views);
-      
-      // Annotations for updates (a bit complex in raw Chart.js without plugins, so we'll add them as a separate scatter dataset or vertical lines if we used an annotation plugin, but for simplicity we'll just log them or add a second dataset)
-      // A simple way is to add a scatter dataset for update points
-      const updatePoints = data.updates.map(u => {
-        // Find closest hour
-        const ut = new Date(u).getTime();
-        let closestIdx = 0;
-        let minDiff = Infinity;
-        data.series.forEach((s, i) => {
-          const diff = Math.abs(new Date(s.t).getTime() - ut);
-          if (diff < minDiff) {
-            minDiff = diff;
-            closestIdx = i;
-          }
-        });
-        return { x: labels[closestIdx], y: values[closestIdx] || 0 };
-      });
-
-      const ctx = document.getElementById('impact-chart').getContext('2d');
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Views per Hour',
-              data: values,
-              borderColor: '#DC2626',
-              backgroundColor: 'rgba(220, 38, 38, 0.1)',
-              fill: true,
-              tension: 0.2
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: { beginAtZero: true }
-          }
-        }
-      });
-    } catch (err) {
-      console.error('Failed to load stats', err);
-    }
-  }
-  
-  loadStats();
-</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="/js/stats.js" defer></script>
 
 <%- include('../partials/footer') %>

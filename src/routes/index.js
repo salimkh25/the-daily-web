@@ -1,9 +1,4 @@
-// src/routes/index.js — public pages (open to everyone).
-//
-// [SCAFFOLD] These render the skeleton views with PLACEHOLDER data so you can see the design
-// the moment you start the server. As you build the real logic (GUIDE steps 5, 8), move these
-// handlers into articleController (renderHome / renderArticle) and feed them real data from
-// MongoDB. The commented lines show the wiring you'll switch to.
+// public pages, open to everyone (the logic is in articleController)
 const router = require('express').Router();
 const articleController = require('../controllers/articleController');
 

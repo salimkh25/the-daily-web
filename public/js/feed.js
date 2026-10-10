@@ -1,27 +1,49 @@
-// feed.js - client side search, sorting, category filtering and infinite scroll
-// talking to GET /api/articles without reloading the whole page
+// feed.js - search, category, read/unread filter, sort and infinite scroll on the home page.
+// the server renders page 1; this script loads page 2, 3, ... from GET /api/articles as you
+// scroll, and re-queries page 1 whenever a filter changes - all without reloading the page.
+
+const PAGE_SIZE = 20; // same page size as the server
 
 const urlParams = new URLSearchParams(window.location.search);
-let currentPage = 1;
-let currentSearch = urlParams.get('search') || '';
-let currentSort = urlParams.get('sort') || 'date';
-let currentCategory = urlParams.get('category') || '';
-let currentSeen = urlParams.get('seen') || '';
-let isLoading = false;
+const state = {
+  search: urlParams.get('search') || '',
+  category: urlParams.get('category') || '',
+  seen: urlParams.get('seen') || '',
+  sort: urlParams.get('sort') === 'popular' ? 'popular' : 'date',
+  page: 1,
+};
+
+// every fresh query gets a new id. when a response comes back we check it's still the latest,
+// so a slow answer for "ne" can't overwrite the results for "news" that the user typed after it.
+let requestId = 0;
+let loadingMore = false;
+let reachedEnd = false;
 
 const feedContainer = document.getElementById('feed');
 const sentinel = document.getElementById('feed-sentinel');
 const searchInput = document.getElementById('feed-search');
+const searchForm = document.querySelector('.masthead__search');
 const sortSelect = document.getElementById('feed-sort');
 const seenSelect = document.getElementById('feed-seen');
 const heroSection = document.querySelector('.hero');
 const headingFlag = document.querySelector('.section-flag-heading .section-flag');
-const searchForm = document.querySelector('.masthead__search');
 
-// if arriving with an active search query, update the hero and heading
-if (currentSearch) {
-  if (heroSection) heroSection.style.display = 'none';
-  if (headingFlag) headingFlag.textContent = `Search: "${currentSearch}"`;
+// the 3 hero stories are the start of page 1 - remember them so they aren't repeated in the grid
+const heroIds = new Set(
+  Array.from(document.querySelectorAll('.hero a[href^="/article/"]')).map((a) => a.getAttribute('href').split('/').pop())
+);
+
+// same aliases as the server (src/utils/categories.js)
+function displayCategory(cat) {
+  if (!cat) return '';
+  if (/^tech/i.test(cat)) return 'Technology';
+  if (/^(entertainment|culture)/i.test(cat)) return 'Entertainment';
+  if (/^sport/i.test(cat)) return 'Sport';
+  return cat;
+}
+
+function isPlainFrontPage() {
+  return !state.search && !state.category && !state.seen && state.sort === 'date';
 }
 
 function createArticleCard(article) {
@@ -32,7 +54,8 @@ function createArticleCard(article) {
     const img = document.createElement('img');
     img.className = 'card__media';
     img.src = article.image;
-    img.alt = article.title;
+    img.alt = article.title || '';
+    img.loading = 'lazy';
     card.appendChild(img);
   } else {
     const placeholder = document.createElement('div');
@@ -43,6 +66,7 @@ function createArticleCard(article) {
   const body = document.createElement('div');
   body.className = 'card__body';
 
+  // textContent everywhere (never innerHTML) so article text can't inject html
   const flag = document.createElement('span');
   flag.className = 'section-flag';
   flag.textContent = article.category || 'News';
@@ -72,229 +96,184 @@ function createArticleCard(article) {
   return card;
 }
 
-// pull articles from api and stick them in feed
-async function fetchFeed(append = false) {
-  if (isLoading) return;
-  isLoading = true;
+function buildParams(page) {
+  const params = new URLSearchParams({ page, sort: state.sort });
+  if (state.search) params.set('search', state.search);
+  if (state.category) params.set('category', state.category);
+  if (state.seen) params.set('seen', state.seen);
+  return params;
+}
+
+function setSentinel(visible) {
+  if (sentinel) sentinel.style.display = visible ? 'block' : 'none';
+}
+
+function showFeedMessage(text) {
+  feedContainer.innerHTML = '';
+  const msg = document.createElement('p');
+  msg.className = 'muted';
+  msg.textContent = text;
+  feedContainer.appendChild(msg);
+  setSentinel(false);
+}
+
+function renderArticles(articles, append) {
+  if (!append) feedContainer.innerHTML = '';
+  if (!append && articles.length === 0) {
+    showFeedMessage('No articles found.');
+    reachedEnd = true;
+    return;
+  }
+
+  const skipHeroStories = heroSection && isPlainFrontPage();
+  articles.forEach((article) => {
+    if (skipHeroStories && heroIds.has(article._id)) return;
+    feedContainer.appendChild(createArticleCard(article));
+  });
+
+  // a short page means there is nothing after it
+  reachedEnd = articles.length < PAGE_SIZE;
+  setSentinel(!reachedEnd);
+
+  // on a tall screen the sentinel can still be visible after appending - keep filling
+  requestAnimationFrame(() => {
+    if (!reachedEnd && sentinel && sentinel.getBoundingClientRect().top < window.innerHeight) loadMore();
+  });
+}
+
+// headline, hero, active nav link, selects and the address bar all follow `state`
+function syncUi({ pushHistory = false } = {}) {
+  if (heroSection) heroSection.style.display = isPlainFrontPage() ? '' : 'none';
+  if (headingFlag) {
+    headingFlag.textContent = state.search ? `Search: "${state.search}"` : (displayCategory(state.category) || 'Latest');
+  }
+
+  const active = displayCategory(state.category).toLowerCase();
+  document.querySelectorAll('.catnav__link').forEach((link) => {
+    const linkCat = displayCategory(link.getAttribute('data-category') || '').toLowerCase();
+    link.classList.toggle('is-active', linkCat === active);
+  });
+
+  if (sortSelect) sortSelect.value = state.sort;
+  if (seenSelect) seenSelect.value = state.seen;
+  if (searchInput && document.activeElement !== searchInput) searchInput.value = state.search;
+
+  const query = new URLSearchParams();
+  if (state.search) query.set('search', state.search);
+  if (state.category) query.set('category', state.category);
+  if (state.seen) query.set('seen', state.seen);
+  if (state.sort !== 'date') query.set('sort', state.sort);
+  const url = query.toString() ? `/?${query}` : '/';
+  if (pushHistory) window.history.pushState({}, '', url);
+  else window.history.replaceState({}, '', url);
+}
+
+// a filter changed: load page 1 again and replace the grid
+async function reloadFeed(options) {
+  const myId = ++requestId;
+  state.page = 1;
+  reachedEnd = false;
+  syncUi(options);
 
   try {
-    const params = new URLSearchParams({
-      page: currentPage,
-      sort: currentSort
-    });
-    if (currentSearch) params.set('search', currentSearch);
-    if (currentCategory) params.set('category', currentCategory);
-    if (currentSeen) params.set('seen', currentSeen);
-
-    const res = await fetch(`/api/articles?${params.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch articles');
-    
+    const res = await fetch(`/api/articles?${buildParams(1)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const articles = await res.json();
+    if (myId !== requestId) return; // a newer query started while we waited - ignore this answer
+    renderArticles(articles, false);
+  } catch (err) {
+    console.error('Feed error:', err);
+    if (myId === requestId) showFeedMessage('Could not load articles. Please try again.');
+  }
+}
 
-    if (!append) {
-      feedContainer.innerHTML = ''; // wipe old stuff for fresh query
-    }
+// infinite scroll: append the next page
+async function loadMore() {
+  if (loadingMore || reachedEnd) return;
+  loadingMore = true;
+  const myId = requestId;
 
-    if (!append && articles.length === 0) {
-      const msg = document.createElement('p');
-      msg.className = 'muted';
-      msg.textContent = 'No articles found.';
-      feedContainer.appendChild(msg);
-      if (sentinel) sentinel.style.display = 'none';
-      return;
-    }
-
-    articles.forEach(article => {
-      feedContainer.appendChild(createArticleCard(article));
-    });
-
-    if (sentinel) {
-      if (articles.length < 20) {
-        sentinel.style.display = 'none'; // hit the bottom
-      } else {
-        sentinel.style.display = 'block';
-      }
-    }
+  try {
+    const res = await fetch(`/api/articles?${buildParams(state.page + 1)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const articles = await res.json();
+    if (myId !== requestId) return; // filters changed meanwhile, this page belongs to the old query
+    state.page += 1;
+    renderArticles(articles, true);
   } catch (err) {
     console.error('Feed error:', err);
   } finally {
-    isLoading = false;
+    loadingMore = false;
   }
 }
 
-// update active class on header nav links
-function updateNavHighlight(cat) {
-  const norm = (cat || '').toLowerCase();
-  document.querySelectorAll('.catnav__link').forEach(link => {
-    const linkCat = (link.getAttribute('data-category') || '').toLowerCase();
-    const isAct = (!norm && !linkCat) || (norm && (norm === linkCat || (norm === 'technology' && linkCat === 'tech') || (norm === 'tech' && linkCat === 'technology') || (norm === 'culture' && linkCat === 'entertainment') || (norm === 'entertainment' && linkCat === 'culture')));
-    if (isAct) {
-      link.classList.add('is-active');
-    } else {
-      link.classList.remove('is-active');
-    }
-  });
-}
+// ---- wiring ----
 
-// category nav bar clicks - switch category without full page refresh
-document.querySelectorAll('.catnav__link').forEach(link => {
+// category nav: switch category without a page reload (back/forward still works via pushState)
+document.querySelectorAll('.catnav__link').forEach((link) => {
   link.addEventListener('click', (e) => {
-    // only do ajax if we already on home page
-    if (window.location.pathname !== '/' && window.location.pathname !== '') {
-      return;
-    }
-
     e.preventDefault();
-    const targetUrl = new URL(link.href, window.location.origin);
-    const chosenCat = targetUrl.searchParams.get('category') || '';
-
-    if (chosenCat === currentCategory && !currentSearch) {
-      return; // already looking at it
-    }
-
-    currentCategory = chosenCat;
-    currentSearch = '';
+    const chosen = new URL(link.href, window.location.origin).searchParams.get('category') || '';
+    if (chosen === state.category && !state.search) return; // already showing it
+    state.category = chosen;
+    state.search = '';
     if (searchInput) searchInput.value = '';
-    currentPage = 1;
-
-    updateNavHighlight(currentCategory);
-    window.history.pushState({ category: currentCategory }, '', link.href);
-
-    if (headingFlag) {
-      let display = 'Latest';
-      if (currentCategory) {
-        display = currentCategory.toLowerCase() === 'tech' ? 'Technology' : currentCategory;
-      }
-      headingFlag.textContent = display;
-    }
-
-    if (heroSection) {
-      heroSection.style.display = currentCategory ? 'none' : '';
-    }
-
-    fetchFeed(false);
+    reloadFeed({ pushHistory: true });
   });
 });
 
-// handle back and forward buttons in browser
 window.addEventListener('popstate', () => {
-  if (window.location.pathname !== '/' && window.location.pathname !== '') {
-    return;
-  }
   const params = new URLSearchParams(window.location.search);
-  currentCategory = params.get('category') || '';
-  currentSearch = '';
-  if (searchInput) searchInput.value = '';
-  currentPage = 1;
-
-  updateNavHighlight(currentCategory);
-
-  if (headingFlag) {
-    let display = 'Latest';
-    if (currentCategory) {
-      display = currentCategory.toLowerCase() === 'tech' ? 'Technology' : currentCategory;
-    }
-    headingFlag.textContent = display;
-  }
-
-  if (heroSection) {
-    heroSection.style.display = currentCategory ? 'none' : '';
-  }
-
-  fetchFeed(false);
+  state.search = params.get('search') || '';
+  state.category = params.get('category') || '';
+  state.seen = params.get('seen') || '';
+  state.sort = params.get('sort') === 'popular' ? 'popular' : 'date';
+  reloadFeed();
 });
 
-// title bar search submit handling
-if (searchForm) {
-  searchForm.addEventListener('submit', (e) => {
-    // on home page, intercept submit so we dont do a full page reload
-    if (window.location.pathname === '/' || window.location.pathname === '') {
-      e.preventDefault();
-      clearTimeout(searchTimeout);
-      currentSearch = searchInput ? searchInput.value.trim() : '';
-      currentPage = 1;
-
-      if (heroSection) {
-        heroSection.style.display = (currentSearch || currentCategory) ? 'none' : '';
-      }
-
-      if (headingFlag) {
-        if (currentSearch) {
-          headingFlag.textContent = `Search: "${currentSearch}"`;
-        } else {
-          headingFlag.textContent = currentCategory ? (currentCategory === 'Tech' ? 'Technology' : currentCategory) : 'Latest';
-        }
-      }
-
-      const query = new URLSearchParams();
-      if (currentSearch) query.set('search', currentSearch);
-      if (currentCategory) query.set('category', currentCategory);
-      if (currentSort && currentSort !== 'date') query.set('sort', currentSort);
-      window.history.replaceState({}, '', query.toString() ? `/?${query.toString()}` : '/');
-
-      fetchFeed(false);
-    }
-  });
-}
-
-// search with small debounce so we dont spam api
+// search: live while typing (debounced) and on enter
 let searchTimeout;
 if (searchInput) {
-  searchInput.addEventListener('input', (e) => {
+  searchInput.addEventListener('input', () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-      currentSearch = e.target.value.trim();
-      currentPage = 1;
-
-      // hide hero while searching so user sees only matching results
-      if (heroSection) {
-        heroSection.style.display = (currentSearch || currentCategory) ? 'none' : '';
-      }
-
-      if (headingFlag) {
-        if (currentSearch) {
-          headingFlag.textContent = `Search: "${currentSearch}"`;
-        } else {
-          headingFlag.textContent = currentCategory ? (currentCategory === 'Tech' ? 'Technology' : currentCategory) : 'Latest';
-        }
-      }
-
-      const query = new URLSearchParams();
-      if (currentSearch) query.set('search', currentSearch);
-      if (currentCategory) query.set('category', currentCategory);
-      if (currentSort && currentSort !== 'date') query.set('sort', currentSort);
-      window.history.replaceState({}, '', query.toString() ? `/?${query.toString()}` : '/');
-
-      fetchFeed(false);
-    }, 250);
+      state.search = searchInput.value.trim();
+      reloadFeed();
+    }, 300);
+  });
+}
+if (searchForm) {
+  searchForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    clearTimeout(searchTimeout);
+    state.search = searchInput ? searchInput.value.trim() : '';
+    reloadFeed();
   });
 }
 
-// sort dropdown (date or popular)
 if (sortSelect) {
-  sortSelect.addEventListener('change', (e) => {
-    currentSort = e.target.value;
-    currentPage = 1;
-    fetchFeed(false);
+  sortSelect.addEventListener('change', () => {
+    state.sort = sortSelect.value === 'popular' ? 'popular' : 'date';
+    reloadFeed();
   });
 }
 
-// read-status filter (all / unread / read) - uses the articles you've opened this session
 if (seenSelect) {
-  seenSelect.addEventListener('change', (e) => {
-    currentSeen = e.target.value;
-    currentPage = 1;
-    fetchFeed(false);
+  seenSelect.addEventListener('change', () => {
+    state.seen = seenSelect.value;
+    reloadFeed();
   });
 }
 
-// infinite scroll observer - loads next batch when sentinel shows up
-if (sentinel && window.IntersectionObserver) {
+// the server rendered page 1 - if it wasn't full there is no page 2
+const renderedCount = feedContainer.querySelectorAll('.card').length + (heroSection ? heroIds.size : 0);
+reachedEnd = renderedCount < PAGE_SIZE;
+setSentinel(!reachedEnd);
+
+// load the next page a little before the user reaches the bottom
+if (sentinel && 'IntersectionObserver' in window) {
   const observer = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting && !isLoading) {
-      currentPage++;
-      fetchFeed(true);
-    }
-  }, { rootMargin: '100px' });
+    if (entries[0].isIntersecting) loadMore();
+  }, { rootMargin: '300px' });
   observer.observe(sentinel);
 }

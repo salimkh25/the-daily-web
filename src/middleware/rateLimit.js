@@ -1,15 +1,10 @@
-// src/middleware/rateLimit.js — [WORKED EXAMPLE ✅ fully implemented]
+// comment rate limit: a guest may post at most 3 comments per minute from the same device.
+// the SERVER enforces it and answers 429 with a clear message (hiding a button isn't enforcement).
 //
-// The spec: a guest may post at most 3 comments per minute from the same device, and the
-// SERVER must enforce it (hiding a button on the client is not enforcement). Exceeding it
-// returns a clear message.
-//
-// This is a simple in-memory sliding-window limiter — no external library. It keeps, per
-// identifier, the timestamps of recent hits and rejects once there are `max` within `windowMs`.
-//
-// Note for the defense: an in-memory map resets on server restart and isn't shared across
-// multiple server processes. That's fine for this project; if asked how you'd scale it, the
-// answer is a shared store (e.g. a small MongoDB collection or Redis) keyed the same way.
+// simple in-memory sliding window, no library: per ip we keep the times of recent comments and
+// refuse once there are `max` of them inside `windowMs`.
+// limitation: the map resets on restart and isn't shared between several server processes -
+// to scale it out you'd keep the same keys in a shared store (a small mongo collection or redis).
 const logger = require('../utils/logger');
 
 const hits = new Map(); // identifier -> number[] (timestamps in ms)

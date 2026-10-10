@@ -1,12 +1,7 @@
 <%- include('partials/header') %>
 
-<!-- [SKELETON] The layout + design are here; the DATA is your job.
-     Build: articleController.renderHome + GET /api/articles, then feed real published
-     articles into `hero` and `articles`, and add search / filter / sort / infinite scroll
-     (public/js/feed.js). GUIDE steps 5-7. -->
-
-
-
+<!-- page 1 of the feed is rendered here on the server; public/js/feed.js loads the next pages and
+     re-queries /api/articles when the search, category, read filter or sort changes (no reload). -->
 <div class="home">
   <div class="home__main">
     <!-- HERO: lead story + two secondary. -->
@@ -62,18 +57,18 @@
     <!-- TOOLS: filter by read status + sort. -->
     <div class="feed-tools">
       <select class="field__input" id="feed-seen" aria-label="Filter by read status">
-        <option value="">All stories</option>
-        <option value="unseen">Unread</option>
-        <option value="seen">Read</option>
+        <option value="" <%= !currentSeen ? 'selected' : '' %>>All stories</option>
+        <option value="unseen" <%= currentSeen === 'unseen' ? 'selected' : '' %>>Unread</option>
+        <option value="seen" <%= currentSeen === 'seen' ? 'selected' : '' %>>Read</option>
       </select>
       <select class="field__input" id="feed-sort" aria-label="Sort by">
-        <option value="date">Newest</option>
-        <option value="popular">Most popular</option>
+        <option value="date" <%= currentSort === 'date' ? 'selected' : '' %>>Newest</option>
+        <option value="popular" <%= currentSort === 'popular' ? 'selected' : '' %>>Most popular</option>
       </select>
     </div>
 
     <!-- FEED: card grid (Flexbox flex-wrap). -->
-    <h2 class="section-flag-heading"><span class="section-flag"><%= (typeof currentCategory !== 'undefined' && currentCategory) ? (currentCategory.toLowerCase() === 'tech' ? 'Technology' : (currentCategory.toLowerCase() === 'culture' ? 'Entertainment' : currentCategory)) : 'Latest' %></span></h2>
+    <h2 class="section-flag-heading"><span class="section-flag"><%= currentSearch ? `Search: "${currentSearch}"` : (currentCategory || 'Latest') %></span></h2>
     <div class="feed" id="feed">
       <% if (articles && articles.length > 0) { %>
         <% articles.forEach(function(article) { %>
@@ -92,7 +87,7 @@
           </article>
         <% }); %>
       <% } else { %>
-        <p>No articles found.</p>
+        <p class="muted">No articles found.</p>
       <% } %>
     </div>
     <div class="feed-sentinel" id="feed-sentinel">Loading more…</div>
