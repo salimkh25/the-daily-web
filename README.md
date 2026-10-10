@@ -3,7 +3,7 @@
 **Student:** Salim Khnefis  
 **ID:** 322465238
 
-Final project for **Web Applications Development** (summer semester): a news management, editing and publishing platform. Built only with the course stack: **Node.js, Express, MongoDB + Mongoose, EJS, vanilla JavaScript + Ajax, HTML5, CSS Flexbox**, following the **MVC** pattern.
+Final project for **Web Applications Development**: a news management, editing and publishing platform.
 
 This README covers the three items the project spec asks for:
 
@@ -22,7 +22,7 @@ This README covers the three items the project spec asks for:
 
 ### Steps
 
-```bash
+```bash #learned that trick from chatgpt
 # 1. Install the dependencies
 npm install
 
@@ -60,7 +60,7 @@ WEATHER_UNITS=metric
 # WEATHER_LON=35.1694
 ```
 
-`.env` is gitignored, so no passwords or API keys are ever committed. Without a weather key the site still works; the widget just shows that the weather is unavailable.
+`.env` is gitignored, so no passwords or API keys are ever committed. Without a weather key the site still works; the widget just shows that the weather is unavailable. as you asked int the project prd.
 
 ### Demo logins (created by `npm run seed`)
 
@@ -152,7 +152,7 @@ the-daily-web/
 
 - Three user types: **Guest**, **Reporter**, **Editor**. Reporters and editors log in with a username and password.
 - Passwords are stored as **bcrypt hashes**, never as plain text.
-- **Every permission check runs on the server** (role, article ownership, allowed state changes). Hiding a button in the browser is never the only protection.
+- **Every permission check runs on the server** 
 - **Sessions are stored in MongoDB**, so a logged-in user stays logged in after a server restart.
 - After login, a reporter goes to their workspace and an editor goes to the management area.
 
@@ -203,6 +203,4 @@ the-daily-web/
 - Important events are logged to the console, and errors are also saved to `logs/error.log`.
 - REST API for the Ajax calls, semantic HTML5, and a **responsive layout** for desktop, tablet and phone built with Flexbox.
 
-### Libraries used
 
-`express`, `mongoose`, `ejs`, `express-session`, `connect-mongo` (sessions in MongoDB), `bcryptjs` (password hashing), `method-override` (`PUT`/`DELETE` from HTML forms), and Chart.js from a CDN for the analytics chart.
